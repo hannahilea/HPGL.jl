@@ -50,13 +50,13 @@ using HPGL
 ps = PlotState(PlotterConfig())
 
 # plot initial input commands
-plot_commands!(ps, ["IN", "SP1", "PA 30,30", "PD"])
+plot_commands!(ps, ["IN", "SP1", "PA 300,300", "PD"])
 
 # plot commands one at a time 
 plot_command!(ps, "PA 3000,3000")
 
 # plot commands in bulk
-cmds = map(x -> "PA $x, $(x^1.2)", 1:10:10_000)
+cmds = map(x -> "PA $x,$(x^1.2)", 1:10:10_000)
 plot_commands!(ps, cmds)
 ```
 

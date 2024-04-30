@@ -24,9 +24,13 @@ function get_coords_from_parameter_str(str::AbstractString)
     isempty(str) && return []
     return map(split(str, " ")) do param
         coord_strs = split(rstrip(lstrip(param)), ",")
-        coords = parse.(Int, filter(!isempty, coord_strs)) #TODO-future: check if float supported by printer?
+        #TODO-future: handle float + 4 digits?
+        coords = let 
+            fl = parse.(Float64, filter(!isempty, coord_strs)) 
+            Int.(round.(fl))
+        end
         length(coords) == 2 ||
-            (@warn "Unexpected position command (`$cmd`); expected format `PA x,y`")
+            (@warn "Unexpected position command (`$param`); expected format `x,y`")
         return coords
     end
 end
@@ -41,6 +45,10 @@ end
 function validate_file(filename)
     contents = read(filename, String)
     commands = get_commands(contents)
+    return validate_commands(commands)
+end
+
+function validate_commands(commands)
     first(commands) == "IN" || @warn "Expected first command to be `IN`"
     startswith(commands[2], "SP") ||
         @warn "Expected second command to select a pen (e.g. `SP1`)"
