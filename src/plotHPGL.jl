@@ -2,51 +2,44 @@
 module PlotHPGL
 
 using CairoMakie
-using CairoMakie.Colors
 using HPGL: read_commands, get_coords_from_parameter_str, get_pen_index, validate_file,
             validate_commands
 
-CairoMakie.activate!(; type="svg")
+CairoMakie.activate!(; type="svg") #Can be svg
 
 export plot_file, plot!, plot_command!, plot_commands!, PlotterConfig, PlotState
 
 const DEFAULT_PLOT_SIZE = (10300, 7650)
-const DEBUG_PEN_UP_COLOR = colorant"purple"
-const MISSING_COLOR = alphacolor(colorant"white", 0)
-const DEFAULT_PEN_COLORS = [alphacolor(RGB(0, 0, 0), 0.8),
-                            alphacolor(colorant"red2", 0.8),
-                            alphacolor(colorant"gold1", 0.8),
-                            alphacolor(colorant"mediumblue", 0.8)]
+const DEBUG_PEN_UP_COLOR = :magenta
+const DEFAULT_PEN_COLORS = [:black, :red, :yellow, :blue]
 
 Base.@kwdef struct PlotterConfig
     plot_dimensions = DEFAULT_PLOT_SIZE
     pen_colors = DEFAULT_PEN_COLORS
-    linewidth = 1.5 # pen thickness
+    linewidth = 20 # pen thickness
     debug = false
 end
 
 Base.@kwdef mutable struct PlotState
     config::PlotterConfig
-    figAxPlot::Any
-    points::Any
-    colors::Any
     i_pen::Int = 0
     pen_is_down::Bool = false
+    pen_position = Point2{Int64}(0, 0)
+    f::Figure
+    ax::Axis
 end
 
 function PlotState(config)
-    points = Observable([Point2(0, 0)])
-    colors = Observable([MISSING_COLOR])
-    figAxPlot = lines(points; color=colors, size=config.plot_dimensions, config.linewidth,
-                      axis=(;
-                            limits=(-10, first(config.plot_dimensions) + 10, -10,
-                                    last(config.plot_dimensions) + 10)))
-    hidedecorations!(figAxPlot.axis)
-    config.debug || hidespines!(figAxPlot.axis)  # hide the frame
-    return PlotState(; figAxPlot, points, colors, config)
+    f = Figure(; size=config.plot_dimensions)
+    ax = Axis(f[1, 1];
+              limits=(-10, first(config.plot_dimensions) + 10, -10,
+                      last(config.plot_dimensions) + 10))
+    hidedecorations!(ax)
+    config.debug || hidespines!(ax)  # hide the frame
+    return PlotState(; config, f, ax)
 end
 
-Base.display(s::PlotState) = Base.display(s.figAxPlot)
+Base.display(s::PlotState) = Base.display(s.f)
 
 function validate_position(pos_string::AbstractString, args...)
     coords = get_coords_from_parameter_str(pos_string)
@@ -89,7 +82,8 @@ function splat_commands(raw_commands)
     return commands
 end
 
-function plot_file(filename; config=PlotterConfig(), outfile=missing)
+function plot_file(filename; config=PlotterConfig(), outfile=missing,
+                   pause_before_each_command=false)
     # Safety first (will warn, not error)
     validate_file(filename) ## Won't fail but will print warnings
     raw_commands = read_commands(filename)
@@ -100,53 +94,57 @@ function plot_file(filename; config=PlotterConfig(), outfile=missing)
     end
 
     ps = PlotState(config)
-    plot_commands!(ps, commands)
-    !ismissing(outfile) && save(outfile, ps.figAxPlot.figure)
+    plot_commands!(ps, commands; pause_before_each_command)
+    !ismissing(outfile) && save(outfile, ps.f)
+    display(ps)
     return ps
 end
 
 function _get_current_pen_color(state)
-    if state.pen_is_down
-        return state.i_pen == 0 ? MISSING_COLOR : state.config.pen_colors[state.i_pen]
+    if state.pen_is_down && state.i_pen != 0
+        return state.config.pen_colors[state.i_pen]
     end
-    return state.config.debug ? DEBUG_PEN_UP_COLOR : MISSING_COLOR
+    return DEBUG_PEN_UP_COLOR
 end
 
 function _move_to_point!(state::PlotState, pos)
     isnothing(validate_position(pos, state.config.plot_dimensions)) || return nothing
-    push!(state.points[], pos)
-    push!(state.colors[], _get_current_pen_color(state))
-    notify(state.points)
-    notify(state.colors)
+    if state.pen_is_down || state.config.debug
+        points = [state.pen_position, pos]
+        color = _get_current_pen_color(state)
+        @debug points color
+        lines!(points; color, state.config.linewidth)
+    end
+    state.pen_position = pos
     return state
 end
 
 # assumes validated commands
 # assumes fig's axis has already been constructed via set_up_figure
-function plot_commands!(state::PlotState, commands::AbstractVector)
+function plot_commands!(state::PlotState, commands::AbstractVector;
+                        pause_before_each_command::Bool)
     for cmd in commands
+        if pause_before_each_command
+            display(state)
+            print("Type any command to do next command `$cmd`")
+            readline()
+        end
         plot_command!(state, cmd)
     end
-    return state.figAxPlot.figure
+    return state
 end
 
 function plot_command!(state::PlotState, cmd)
     if cmd == "PD"
-        # If pen is already down, putting it down does nothing
-        if !state.pen_is_down
-            state.pen_is_down = true
-            _move_to_point!(state, last(state.points[]))
-        end
+        state.pen_is_down = true
     elseif cmd == "PU"
-        # If pen is already up, putting it up does nothing
-        if state.pen_is_down
-            state.pen_is_down = false
-            _move_to_point!(state, last(state.points[]))
-        end
+        state.pen_is_down = false
     elseif cmd == "IN"
-        # do nothing...
+        _move_to_point!(state, Point2{Int64}(0, 0))
+        state.pen_is_down = false
+        state.i_pen = 0
     elseif startswith(cmd, "SP")
-        _move_to_point!(state, (0, 0))
+        _move_to_point!(state, Point2{Int64}(0, 0))
         state.pen_is_down = false
         state.i_pen = get_pen_index(cmd)
     elseif startswith(cmd, "PA")
@@ -160,7 +158,7 @@ function plot_command!(state::PlotState, cmd)
     else
         @warn "Command `$cmd` is currently unsupported by this visualizer"
     end
-    return state.figAxPlot.figure
+    return state
 end
 
 end # module PlotHPGL

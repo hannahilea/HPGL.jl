@@ -28,14 +28,14 @@ validate_file(joinpath(pkgdir(HPGL), "examples/invalid_file.hpgl")) # Shows warn
 To plot an HPGL file, and save it's resultant output to `outfile`, do
 ```
 using HPGL
-p = plot_file("examples/demo.hpgl"; outfile="myfile.svg")
+p = plot_file("examples/demo.hpgl"; outfile="myfile.png")
 display(p) # to view
 ```
 
 Use debug mode to additionally draw the borders of the plottable area as well as draw the paths of all pen-up movements: 
 ```
 using HPGL
-p = plot_file("examples/demo.hpgl"; config=PlotterConfig(; debug=true))
+p = plot_file("examples/demo.hpgl"; config=PlotterConfig(; debug=true), outfile="myfile.png")
 display(p) # to view
 ```
 For additional configuration, see help docs by doing `?plot_file` in the REPL.

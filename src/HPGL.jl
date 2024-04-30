@@ -25,8 +25,8 @@ function get_coords_from_parameter_str(str::AbstractString)
     return map(split(str, " ")) do param
         coord_strs = split(rstrip(lstrip(param)), ",")
         #TODO-future: handle float + 4 digits?
-        coords = let 
-            fl = parse.(Float64, filter(!isempty, coord_strs)) 
+        coords = let
+            fl = parse.(Float64, filter(!isempty, coord_strs))
             Int.(round.(fl))
         end
         length(coords) == 2 ||
