@@ -18,13 +18,17 @@ function get_commands(str::String)
     return filter(!isempty, cmds)
 end
 
-function get_command_position(cmd)
-    startswith(cmd, "PA") || (@warn "Unexpected prefix for position ($cmd)")
-    strs = split(lstrip(cmd[3:end]), ",")
-    pos = parse.(Int, strs) #TODO-future: check if float supported by printer?
-    length(pos) == 2 ||
-        (@warn "Unexpected position command (`$cmd`); expected format `PA x,y`")
-    return pos
+#TODO-future: nicely handle bad format, fail nicely or something
+function get_coords_from_parameter_str(str::AbstractString)
+    str = rstrip(lstrip(str))
+    isempty(str) && return []
+    return map(split(str, " ")) do param
+        coord_strs = split(rstrip(lstrip(param)), ",")
+        coords = parse.(Int, filter(!isempty, coord_strs)) #TODO-future: check if float supported by printer?
+        length(coords) == 2 ||
+            (@warn "Unexpected position command (`$cmd`); expected format `PA x,y`")
+        return coords
+    end
 end
 
 function get_pen_index(cmd)
@@ -44,9 +48,9 @@ function validate_file(filename)
     for cmd in commands
         if startswith(cmd, "SP")
             get_pen_index(cmd) ## Will print warning if unexpected pen is found
-        elseif startswith(cmd, "PA")
-            get_command_position(cmd) ## Will print warning if formatting is unexpected 
-        elseif !in(cmd, ["IN", "PU", "PD"])
+        elseif startswith(cmd, "PA") || startswith(cmd, "PD") || startswith(cmd, "PU")
+            get_coords_from_parameter_str(cmd[3:end]) ## Will print warning if formatting is unexpected 
+        elseif !in(cmd, ["IN"])
             @warn "Unexpected command `$cmd` (could still be a valid command, and not yet handled by PlotHPGL.jl)"
         end
     end
