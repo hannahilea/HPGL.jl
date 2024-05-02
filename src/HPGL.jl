@@ -1,6 +1,10 @@
 module HPGL
 
+using LibSerialPort
+using Dates
+
 export validate_file
+export set_up_plotter, run_plotter_repl
 export plot_file, plot_command!, plot_commands!, PlotterConfig, PlotState # From PlotHPGL
 
 function read_commands(filename)
@@ -72,5 +76,8 @@ end
 
 include("./plotHPGL.jl")
 using .PlotHPGL
+
+include("./serialport.jl")
+
 
 end # module HPGL
