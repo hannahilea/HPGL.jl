@@ -11,36 +11,53 @@ function run_plotter_repl(port; safety_up=true, outfile="plotter_repl_debug_$(no
     if isdefined(Main, :VSCodeServer)
         @warn "Likely cannot run `plotter_repl` from an interactive VSCode session; user input broken"
     end
+    while true
+        print("Enter next command: ")
+        cmd = readline()
+        cmd == "exit()" && break
+        send_plotter_cmd(port, cmd; safety_up, outfile)
+    end
+    return outfile
+end
 
-    if !ismissing(outfile)
+#TODO: actual julia repl mode for plotter
+#TODO: move kwargs into options struct
+#TODO: if port is missing, handle that nicely too
+#TODO: rename `outfile` to `logfile`
+
+function send_plotter_cmds(port, cmds; kwargs...)
+    for cmd in cmds
+        send_plotter_cmd(port, cmd; kwargs...)
+        sleep(.2)
+    end
+    return nothing
+end
+
+function send_plotter_cmd(port, cmd::String; safety_up=true, outfile)
+    if !ismissing(outfile) && !isfile(outfile)
         mkpath(dirname(outfile))
         touch(outfile)
         @info "Saving commands out to $outfile"
     end
 
-    run_command = (cmd) -> begin
-        endswith(cmd, ";") || (cmd *= ";")
-        cmd *= "\n"
-        @debug "Sending: " cmd
-        write(port, cmd)
-        if !ismissing(outfile)
-            open(outfile, "a") do f
-                # Make sure we write 64bit integer in little-endian byte order
-                return write(f, cmd)
-            end
-        end
-        return nothing
-    end
+    endswith(cmd, ";") || (cmd *= ";")
+    cmd *= "\n"
 
-    while true
-        print("Enter next command: ")
-        cmd = readline()
-        cmd == "exit()" && break
+    @debug "Sending: " cmd
+    write(port, cmd)
+    append_to_file!(outfile, cmd)
 
-        run_command(cmd)
-        if safety_up && (startswith(cmd, "PA") || startswith(cmd, "PD"))
-            run_command("PU")
-        end
+    if safety_up && (startswith(cmd, "PA") || startswith(cmd, "PD"))
+        cmd_up = "PU;"
+        write(port, cmd_up)
+        append_to_file!(outfile, cmd_up * "\n")
     end
     return nothing
+end
+
+append_to_file!(_, ::Missing) = nothing
+function append_to_file!(file, str)
+    return open(file, "a") do f
+        return write(f, str)
+    end
 end

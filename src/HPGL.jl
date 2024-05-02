@@ -4,7 +4,7 @@ using LibSerialPort
 using Dates
 
 export validate_file
-export set_up_plotter, run_plotter_repl
+export set_up_plotter, run_plotter_repl, send_plotter_cmd, send_plotter_cmds
 export plot_file, plot_command!, plot_commands!, PlotterConfig, PlotState # From PlotHPGL
 
 function read_commands(filename)
