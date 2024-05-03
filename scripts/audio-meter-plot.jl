@@ -1,10 +1,15 @@
-using PortAudio
 using HPGL
 
 # Set up plotter
 plotter_port = set_up_plotter()
 logfile = "audio_plotter_repl_debug_$(now()).hpgl"
-send_plotter_cmds(plotter_port, ["IN", "SP3", "PA0,0", "PU"]; logfile)
+
+# Not strictly necessary BUT will reset any settings you previously had going, 
+# which is probably what you want unless you KNOW you don't want it
+send_plotter_cmds(plotter_port, ["IN", "SP1", "PA0,0"]; logfile)
+
+# Start monitoring sound!
 micmeter(; x_offset=0, y_offset=500)
 
-send_plotter_cmds(plotter_port, ["PU", "PA 0,0", "SP0"]; safety_up, logfile)
+# ...clean up after yourself:
+send_plotter_cmds(plotter_port, ["PU", "PA 0,0", "SP0"]; logfile)
