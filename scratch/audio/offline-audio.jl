@@ -35,23 +35,23 @@ output_basic_abs_max = basic_abs_max(buf.data)
 # Set up plotter
 safety_up = false
 plotter_port = set_up_plotter()
-outfile = "audio_plotter_repl_debug_$(now()).hpgl"
-send_plotter_cmds(plotter_port, ["IN", "SP2", "PA0,0", "PU"]; safety_up, outfile)
+logfile = "audio_plotter_repl_debug_$(now()).hpgl"
+send_plotter_cmds(plotter_port, ["IN", "SP2", "PA0,0", "PU"]; safety_up, logfile)
 
 # Convert to HPGL 
 let
     x = 2000
     y_offset = 1000
-    send_plotter_cmds(plotter_port, ["PU", "PA$x,$(y_offset)"]; safety_up, outfile)
+    send_plotter_cmds(plotter_port, ["PU", "PA$x,$(y_offset)"]; safety_up, logfile)
     for (i, m) in enumerate(output_basic_abs_max)
         x += 100
         if x == 6000
             x = 0
             y_offset += 1000
-            send_plotter_cmds(plotter_port, ["PU", "PA$x,$(y_offset)"]; safety_up, outfile)
+            send_plotter_cmds(plotter_port, ["PU", "PA$x,$(y_offset)"]; safety_up, logfile)
             sleep(0.1)
         end
         y = m * 10 + y_offset #TODO: scale!! relative to one line height, and for max/min
-        send_plotter_cmds(plotter_port, ["PD$x,$y"]; safety_up, outfile)
+        send_plotter_cmds(plotter_port, ["PD$x,$y"]; safety_up, logfile)
     end
 end

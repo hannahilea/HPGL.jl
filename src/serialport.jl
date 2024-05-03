@@ -7,7 +7,7 @@ function set_up_plotter(; portname="/dev/tty.usbserial-10",
     return LibSerialPort.open(portname, baudrate)
 end
 
-function run_plotter_repl(port; safety_up=true, outfile="plotter_repl_debug_$(now()).hpgl")
+function run_plotter_repl(port; safety_up=true, logfile="plotter_repl_debug_$(now()).hpgl")
     if isdefined(Main, :VSCodeServer)
         @warn "Likely cannot run `plotter_repl` from an interactive VSCode session; user input broken"
     end
@@ -15,15 +15,15 @@ function run_plotter_repl(port; safety_up=true, outfile="plotter_repl_debug_$(no
         print("Enter next command: ")
         cmd = readline()
         cmd == "exit()" && break
-        send_plotter_cmd(port, cmd; safety_up, outfile)
+        send_plotter_cmd(port, cmd; safety_up, logfile)
     end
-    return outfile
+    return logfile
 end
 
 #TODO: actual julia repl mode for plotter
 #TODO: move kwargs into options struct
 #TODO: if port is missing, handle that nicely too
-#TODO: rename `outfile` to `logfile`
+#TODO: rename `logfile` to `logfile`
 
 function send_plotter_cmds(port, cmds; kwargs...)
     for cmd in cmds
@@ -33,11 +33,11 @@ function send_plotter_cmds(port, cmds; kwargs...)
     return nothing
 end
 
-function send_plotter_cmd(port, cmd::String; safety_up=true, outfile)
-    if !ismissing(outfile) && !isfile(outfile)
-        mkpath(dirname(outfile))
-        touch(outfile)
-        @info "Saving commands out to $outfile"
+function send_plotter_cmd(port, cmd::String; safety_up=true, logfile)
+    if !ismissing(logfile) && !isfile(logfile)
+        mkpath(dirname(logfile))
+        touch(logfile)
+        @info "Saving commands out to $logfile"
     end
 
     endswith(cmd, ";") || (cmd *= ";")
@@ -45,12 +45,12 @@ function send_plotter_cmd(port, cmd::String; safety_up=true, outfile)
 
     @debug "Sending: " cmd
     write(port, cmd)
-    append_to_file!(outfile, cmd)
+    append_to_file!(logfile, cmd)
 
     if safety_up && (startswith(cmd, "PA") || startswith(cmd, "PD"))
         cmd_up = "PU;"
         write(port, cmd_up)
-        append_to_file!(outfile, cmd_up * "\n")
+        append_to_file!(logfile, cmd_up * "\n")
     end
     return nothing
 end
