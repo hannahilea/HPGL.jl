@@ -1,5 +1,5 @@
 using Pkg
-Pkg.activate("/Users/skye/Documents/CODE/RC/HPGL.jl")
+Pkg.activate(".") # Should be path to HPGL/audio directory
 using HPGL
 
 plotter_port = set_up_plotter()
