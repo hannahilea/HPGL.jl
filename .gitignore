@@ -1,3 +1,4 @@
 *Manifest.toml
 *.svg
 *.png
+*plotter_repl_debug*.hpgl

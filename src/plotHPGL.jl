@@ -122,7 +122,7 @@ end
 # assumes validated commands
 # assumes fig's axis has already been constructed via set_up_figure
 function plot_commands!(state::PlotState, commands::AbstractVector;
-                        pause_before_each_command::Bool)
+                        pause_before_each_command=false)
     for cmd in commands
         if pause_before_each_command
             display(state)
