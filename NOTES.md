@@ -20,4 +20,13 @@ Success!
     ```
     Then play around with input commands listed in that script.
 
+    Fun commands to try include:
+    - `SM *` then PA commands (draws at * at each coord)
+        - `SM` to leave symbol mode 
+        - if pen is down during that move, will draw symbol at end of it!
+        - Symbols can be anything from decimal code [33-126](https://www.ibm.com/docs/en/aix/7.2?topic=adapters-ascii-decimal-hexadecimal-octal-binary-conversion-table) but not semicolon.
+
+
+- [ ] Question (for manual): are all mnemonics 2 character?
+
 4. On to printing (live) sound in the basic way? See development in `audio/run.jl`. WIP.

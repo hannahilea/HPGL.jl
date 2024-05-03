@@ -3,68 +3,55 @@ Pkg.activate("/Users/skye/Documents/CODE/RC/HPGL.jl/audio")
 using HPGL
 using PortAudio
 using SampledSignals: s
+using Dates
 using CairoMakie
 CairoMakie.activate!(; type="svg") #Can be svg
-using LibSerialPort
 
 # Set up audio input
 stream = PortAudioStream(1, 0)
 
-# Record in 3 s of audio
-buf = read(stream, 3s)
-
-# Generate y-values
-num_resolutions=100 #TODO better name, more like
-function basic_abs_max(samples; num_samples_per_window=100)
-    # Non-overlapping windows
-    windows = Iterators.partition(samples, num_samples_per_window)
-    return map(windows) do w
-        peak = maximum(abs.(w))
-         # clamp to -60dB, 0dB
-        peak = clamp.(20log10.(peak), -60.0, -30.0)
-        return trunc.(Int, (peak + 60)/60 * (num_resolutions-1)) + 1
-
-    end
-end
-output_basic_abs_max = basic_abs_max(buf.data)
-
-# Set up plotting output (for now, visualization)
-function initialize_plotter()
-    ps = PlotState(PlotterConfig(; debug=true, linewidth=10))
-    plot_commands!(ps, ["IN", "SP1", "PA 0,0", "PD"])
-    display(ps)
-    return ps
-end
-
-# Convert to HPGL 
-let
-    ps = initialize_plotter()
-    x = 0
-    for (i, m) in enumerate(output_basic_abs_max)
-        x += 5
-        y = m #TODO: scale!! relative to one line height, and for max/min
-        plot_command!(ps, "PA $x,$y")
-        (i % 100 == 0) && display(ps)
-    end
-    save("outfile.png", ps.f)
-end
-
+# Record audio
+buf = read(stream, 10s)
 # Play it to test 
 PortAudioStream(0, 2; samplerate=buf.samplerate) do stream
     write(stream, buf.data)
 end
 
-# Okay, set up plotter...
-# # rc_plotter_port = SerialPort.new("/dev/tty.usbserial-10", 9600,  8, true, nil);  TODO: uncomment to actually run!
-# using LibSerialPort
-# list_ports()
-# portname = "/dev/cu.usbserial-10"
-# baudrate = 9600
+# Generate y-values
+num_resolutions=100 #TODO better name, more like
+function basic_abs_max(samples; num_samples_per_window=Int(round(buf.samplerate/4)))
+    # Non-overlapping windows
+    windows = Iterators.partition(samples, num_samples_per_window)
+    return map(windows) do w
+        peak = maximum(abs.(w))
+         # clamp to -60dB, 0dB
+        peak = clamp.(20log10.(peak), -60.0, -20.0)
+        #TODO-figure out if this next line is doing what i want!!!
+        return trunc.(Int, (peak + 60)/60 * (num_resolutions-1)) + 1
+    end
+end
+output_basic_abs_max = basic_abs_max(buf.data)
 
-# # Snippet from examples/mwe.jl
-# @assert portname in get_port_list()
-# port = LibSerialPort.open(portname, baudrate)
+# Set up plotter
+safety_up=false
+plotter_port = set_up_plotter()
+outfile = "audio_plotter_repl_debug_$(now()).hpgl"
+send_plotter_cmds(plotter_port, ["IN", "SP2", "PA0,0", "PU"]; safety_up, outfile)
 
-# write(port, "IN\n")
-# write(port, "SP0\n")
-# write(port, "SP1\n")
+# Convert to HPGL 
+ let
+    x = 2000
+    y_offset = 1000
+    send_plotter_cmds(plotter_port, ["PU", "PA$x,$(y_offset)"]; safety_up, outfile)
+    for (i, m) in enumerate(output_basic_abs_max)
+        x += 100
+        if x == 6000 
+            x = 0
+            y_offset += 1000
+            send_plotter_cmds(plotter_port, ["PU", "PA$x,$(y_offset)"]; safety_up, outfile)
+            sleep(.1)
+        end
+        y = m * 10 + y_offset #TODO: scale!! relative to one line height, and for max/min
+        send_plotter_cmds(plotter_port, ["PD$x,$y"]; safety_up, outfile)
+    end
+end

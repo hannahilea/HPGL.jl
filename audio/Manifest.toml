@@ -2,7 +2,7 @@
 
 julia_version = "1.10.2"
 manifest_format = "2.0"
-project_hash = "3d0ebec8d709f7861c30d9f88cca6d41c7cc1bef"
+project_hash = "6b2634b8202a8728ba0680546afedaa33d9d15e2"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -565,7 +565,7 @@ uuid = "42e2da0e-8278-4e71-bc24-59509adca0fe"
 version = "1.0.2"
 
 [[deps.HPGL]]
-deps = ["CairoMakie"]
+deps = ["CairoMakie", "Dates", "LibSerialPort"]
 path = ".."
 uuid = "8a0a8c33-e66a-4f96-b221-102a3c913d75"
 version = "0.1.0"

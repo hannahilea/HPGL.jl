@@ -1,5 +1,6 @@
 [deps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 HPGL = "8a0a8c33-e66a-4f96-b221-102a3c913d75"
 LibSerialPort = "a05a14c7-6e3b-5ba9-90a2-45558833e1df"
 PortAudio = "80ea8bcb-4634-5cb3-8ee8-a132660d1d2d"
