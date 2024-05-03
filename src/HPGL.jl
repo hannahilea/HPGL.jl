@@ -2,9 +2,11 @@ module HPGL
 
 using LibSerialPort
 using Dates
+using PortAudio
 
 export validate_file
-export set_up_plotter, run_plotter_repl, send_plotter_cmd, send_plotter_cmds
+export micmeter # From audio
+export set_up_plotter, run_plotter_repl, send_plotter_cmd, send_plotter_cmds # From serialport
 export plot_file, plot_command!, plot_commands!, PlotterConfig, PlotState # From PlotHPGL
 
 function read_commands(filename)
@@ -78,6 +80,6 @@ include("./plotHPGL.jl")
 using .PlotHPGL
 
 include("./serialport.jl")
-
+include("./audio.jl")
 
 end # module HPGL
