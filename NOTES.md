@@ -29,4 +29,8 @@ Success!
 
 - [ ] Question (for manual): are all mnemonics 2 character?
 
-4. On to printing (live) sound in the basic way? See development in `audio/run.jl`. WIP.
+4. Plot sound in the offline way! See `scratch/audio/offline-audio.jl`, which has the user record 10s of input and then plots it out. 
+
+5. Plot sound in the online (realtime) way! See `scratch/audio/realtime-audio.jl`, which plots the realtime amplitude peaks recorded from the mic.
+
+6. Pull the functionality from `realtime-audio.jl` into packaged code. 
