@@ -5,7 +5,7 @@ using Dates
 using PortAudio
 
 export validate_file
-export micmeter # From audio
+export micmeter, polar_micmeter # From audio
 export set_up_plotter, run_plotter_repl, send_plotter_cmd, send_plotter_cmds # From serialport
 export plot_file, plot_command!, plot_commands!, PlotterConfig, PlotState # From PlotHPGL
 

@@ -27,8 +27,9 @@ end
 
 function send_plotter_cmds(port, cmds; kwargs...)
     for cmd in cmds
+         @debug "okay" cmd
         send_plotter_cmd(port, cmd; kwargs...)
-        sleep(.2)
+        # sleep(.2)
     end
     return nothing
 end
