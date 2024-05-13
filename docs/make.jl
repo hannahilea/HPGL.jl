@@ -6,6 +6,6 @@ makedocs(; modules=[HPGL],
          authors="hannahilea",
          pages=["API Documentation" => "index.md"])
 
-deploydocs(; repo="github.com/hannahilea/HPGL.git",
+deploydocs(; repo="github.com/hannahilea/HPGL.jl.git",
            push_preview=true,
            devbranch="main")
