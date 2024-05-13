@@ -1,8 +1,8 @@
 # HPGL.jl
 
-Generates [(HPGL)](https://en.wikipedia.org/wiki/HP-GL) files, which can be written to a file or sent directly to a pen plotter.
+Interface for generating both realtime and offline [(HPGL)](https://en.wikipedia.org/wiki/HP-GL) code, which can sent directly to a pen plotter or previewed with the included visualizer. 
 
-To plot HPGL file with an external pen plotter, use this [external `chunker` utility](https://github.com/WesleyAC/plotter-tools/tree/4a285e167421d2a917561413cda4e8724e860f5c/chunker). 
+To plot a full pre-generated HPGL file with an external pen plotter, use this [external `chunker` utility](https://github.com/WesleyAC/plotter-tools/tree/4a285e167421d2a917561413cda4e8724e860f5c/chunker).
 
 ## Installation 
 With [Julia installed](https://julialang.org/downloads/), start the Julia REPL and add this package to your environment:
@@ -12,7 +12,16 @@ Pkg.add("url="https://github.com/hannahilea/HPGL.jl")
 using HPGL
 ```
 
-## Usage
+## Pen plotter usage: realtime audio plotting!
+The [scripts/](./scripts/) directory contains some common entrypoints for generating/working with generating HPGL and a pen plotter.
+
+- [`validate-serialport.jl`](./scripts/validate-serialport.jl): Test script to ensure plotter serialport connection is valid. Run each command sequentially in the Julia REPL.
+- [`explore-hpgl-commands.jl`](./scripts/explore-hpgl-commands.jl): Test script to explore additional pen plotter commands. Run each command sequentially in the REPL.
+- [`audio-meter-plot.jl`](./scripts/audio-meter-plot.jl): Demonstrates entrypoint to plotting realtime audio, as plotted horizontally across the page. Run each command sequentially in the REPL.
+- [`polar-audio.jl`](./scripts/polar-audio.jl): Demonstrates entrypoint to plotting realtime audio, as plotted spiraling out from the center of the page. Run each command sequentially in the REPL.
+
+
+## Non-pen plotter utilities
 
 ### File validation
 
@@ -25,7 +34,7 @@ validate_file(joinpath(pkgdir(HPGL), "examples/invalid_file.hpgl")) # Shows warn
 
 ### File preview/visualization
 
-To plot an HPGL file, and save it's resultant output to `outfile`, do
+To preview an HPGL file, and save it's resultant output to `outfile`, do
 ```
 using HPGL
 p = plot_file("examples/demo.hpgl"; outfile="myfile.png")
@@ -40,9 +49,9 @@ display(p) # to view
 ```
 For additional configuration, see help docs by doing `?plot_file` in the REPL.
 
-### Cumulative preview
+### Realtime (cumulative) preview/visualization
 
-To plot HPGL commands one at a time, do
+To preview HPGL commands one at a time, do
 ```
 using HPGL
 
@@ -60,12 +69,6 @@ cmds = map(x -> "PA $x,$(x^1.2)", 1:10:10_000)
 plot_commands!(ps, cmds)
 ```
 
-## Resources
+## External resources
 - https://github.com/WesleyAC/plotter-tools
 
-## Dev notes
-Up next:
-- [ ] Docstrings
-- [ ] Set up https://github.com/JuliaIO/LibSerialPort.jl to support sending HGPL to the plotter directly (instead of relying on external tools)
-- [ ] Support other basic HGPL commands that the plotter supports (relative position, text, etc)
-- [ ] Set up GHA for built docs/CI/tests (+ add tests...)
