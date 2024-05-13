@@ -32,8 +32,6 @@ jobs:
         runs-on:
           - macos-latest
           # - unbuntu-latest Fails w/ same issue as https://github.com/JuliaAudio/PortAudio.jl/issues/126
-        arch:
-          - aarch64
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,7 +39,6 @@ jobs:
       - uses: julia-actions/setup-julia@latest
         with:
           version: ${{ matrix.version }}
-          arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v1
         with:
           cache-name: "${{ github.workflow }}-${{ github.job }}-${{ matrix.runs-on }}"
