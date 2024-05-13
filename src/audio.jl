@@ -1,8 +1,8 @@
 
 """
     micmeter(plotter_port; x_offset=0, y_offset=0, xtick=100, ytick=1000, xmax=10_000)
-    
-Continuously read from the default audio input and send commands to plot the per-buffer level to 
+
+Continuously read from the default audio input and send commands to plot the per-buffer level to
 `plotter_port` (via [`send_plotter_cmds`](@ref)).
 TODO-document kwargs, pull out more kwargs
 """
@@ -21,18 +21,18 @@ function micmeter(plotter_port; x_offset=0, y_offset=0, xtick=100, ytick=1000, x
             @debug blockmax_raw blockmax
             y = y_offset + blockmax #TODO-maybe scale for niceness
             @debug x y
-            send_plotter_cmds(plotter_port, ["PA $x,$y"]; safety_up, logfile)
+            send_plotter_cmds(plotter_port, ["PA $x,$y"]; rate_limit_duration_sec=0, safety_up, logfile)
 
             x += xtick
             if x >= xmax
                 x = x_offset
                 y_offset += ytick
-                send_plotter_cmds(plotter_port, ["PU", "PA$x,$(y_offset)", "PD"]; safety_up,
+                send_plotter_cmds(plotter_port, ["PU", "PA$x,$(y_offset)", "PD"]; rate_limit_duration_sec=0, safety_up,
                                   logfile)
             end
         end
     finally
-        send_plotter_cmds(plotter_port, ["PU"]; safety_up, logfile)
+        send_plotter_cmds(plotter_port, ["PU"]; rate_limit_duration_sec=0, safety_up, logfile)
     end
     return nothing
 end
@@ -50,7 +50,7 @@ function polar_micmeter(plotter_port; start_point=(5150, 3825), logfile, num_ste
 
     @info "PRE"
     for i in 1:num_steps  # while true
-        
+
         # @info i
         block = read(mic, 12000) #TODO-may need to adjust! #TODO: LUDWIG IS EXCITED
         blockmax_raw = maximum(abs.(block)) # find the maximum value in the block #TODO-try keeping sign!!
@@ -65,18 +65,18 @@ function polar_micmeter(plotter_port; start_point=(5150, 3825), logfile, num_ste
 
         # y = y_offset + blockmax #TODO-maybe scale for niceness
         # @debug x y
-        send_plotter_cmds(plotter_port, ["PA $x,$y"]; safety_up, logfile)
+        send_plotter_cmds(plotter_port, ["PA $x,$y"]; rate_limit_duration_sec=0, safety_up, logfile)
         if i == 1
-            send_plotter_cmds(plotter_port, ["PD"]; safety_up, logfile)
+            send_plotter_cmds(plotter_port, ["PD"]; rate_limit_duration_sec=0, safety_up, logfile)
         end
-        
+
         radius += r_step
         theta += t_step
         # theta = constant_arc / ((1 + radius)/3825)
         # @info radius theta
         if radius > 3825
             @info "We're over the limit!"
-            send_plotter_cmds(plotter_port, ["PU", "SP0"]; safety_up, logfile)
+            send_plotter_cmds(plotter_port, ["PU", "SP0"]; rate_limit_duration_sec=0, safety_up, logfile)
             break
         end
     end

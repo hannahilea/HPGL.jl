@@ -25,15 +25,28 @@ end
 #TODO: if port is missing, handle that nicely too
 #TODO: rename `logfile` to `logfile`
 
-function send_plotter_cmds(port, cmds; kwargs...)
+"""
+    send_plotter_cmds(port, cmds; rate_limit_duration_sec=0.2, kwargs...)
+
+Send a series of commands via [`send_plotter_cmd`](@ref), with a `rate_limit_duration_sec`
+pause between each function.
+"""
+function send_plotter_cmds(port, cmds; rate_limit_duration_sec=0.2, kwargs...)
     for cmd in cmds
-         @debug "okay" cmd
         send_plotter_cmd(port, cmd; kwargs...)
-        # sleep(.2)
+        @debug "Sent cmd" cmd
+        rate_limit_duration_sec == 0 || sleep(rate_limit_duration_sec)
     end
     return nothing
 end
 
+"""
+    send_plotter_cmd(port, cmd::String; safety_up=true, logfile)
+
+Send single `cmd` to plotter serial port `port`. If `safety_up` is true, any pen down/pen move
+instructions are followed by a "pen up command". `cmd` will additionally be appended
+to `logfile` path, unless `logfile` is `missing`.
+"""
 function send_plotter_cmd(port, cmd::String; safety_up=true, logfile)
     if !ismissing(logfile) && !isfile(logfile)
         mkpath(dirname(logfile))
