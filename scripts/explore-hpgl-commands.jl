@@ -3,7 +3,7 @@ Pkg.activate(".") # Should be path to HPGL directory
 using HPGL
 using Dates
 
-plotter_port = set_up_plotter()
+plotter_port = set_up_serial_port_plotter()
 safety_up = false
 
 logfile = "explore_plotter_repl_debug.hpgl"

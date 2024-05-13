@@ -6,7 +6,7 @@ using PortAudio
 
 export validate_file
 export micmeter, polar_micmeter # From audio
-export set_up_plotter, run_plotter_repl, send_plotter_cmd, send_plotter_cmds # From pen-plot.jl
+export set_up_serial_port_plotter, run_plotter_repl, send_plotter_cmd, send_plotter_cmds # From pen-plot.jl
 export plot_file, plot_command!, plot_commands!, PlotterConfig, PlotState # From visualize.jl
 
 function read_commands(filename)

@@ -2,7 +2,7 @@ using HPGL
 using Dates
 
 # Set up plotter
-plotter_port = set_up_plotter()
+plotter_port = set_up_serial_port_plotter()
 logfile = "audio_plotter_repl_debug_$(now()).hpgl"
 
 # Not strictly necessary BUT will reset any non-default plotter settings,

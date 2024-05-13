@@ -1,12 +1,16 @@
-function set_up_plotter(; portname="/dev/tty.usbserial-10",
+function set_up_serial_port_plotter(; portname="/dev/tty.usbserial-10",
                         baudrate=9600)
     if !((portname in get_port_list()) ||
          (replace(portname, "tty" => "cu") in get_port_list()))
         @warn "Port `$(portname) not found; ensure plotter is connected!" found = list_ports()
+        return missing
     end
+    # TODO-future: make idempotent; check if port already open, return it if so; could maybe add a global var for it? would we
+    # ever have multiple open at once??
     return LibSerialPort.open(portname, baudrate)
 end
 
+#TODO-future: actual julia repl mode for plotter
 function run_plotter_repl(port; safety_up=true, logfile="plotter_repl_debug_$(now()).hpgl")
     if isdefined(Main, :VSCodeServer)
         @warn "Likely cannot run `plotter_repl` from an interactive VSCode session; user input broken"
@@ -15,25 +19,21 @@ function run_plotter_repl(port; safety_up=true, logfile="plotter_repl_debug_$(no
         print("Enter next command: ")
         cmd = readline()
         cmd == "exit()" && break
-        send_plotter_cmd(port, cmd; safety_up, logfile)
+        run_command(port, cmd; safety_up)
+        run_command(logfile, cmd; safety_up)
     end
     return logfile
 end
 
-#TODO: actual julia repl mode for plotter
-#TODO: move kwargs into options struct
-#TODO: if port is missing, handle that nicely too
-#TODO: rename `logfile` to `logfile`
-
 """
-    send_plotter_cmds(port, cmds; rate_limit_duration_sec=0.2, kwargs...)
+    send_plotter_cmds(port, cmds; rate_limit_duration_sec=0.2, safety_up=true)
 
-Send a series of commands via [`send_plotter_cmd`](@ref), with a `rate_limit_duration_sec`
+Send a series of commands via [`run_command`](@ref), with a `rate_limit_duration_sec`
 pause between each function.
 """
-function send_plotter_cmds(port, cmds; rate_limit_duration_sec=0.2, kwargs...)
+function send_plotter_cmds(port, cmds; rate_limit_duration_sec=0.2, safety_up=true)
     for cmd in cmds
-        send_plotter_cmd(port, cmd; kwargs...)
+        run_command(port, cmd; safety_up)
         @debug "Sent cmd" cmd
         rate_limit_duration_sec == 0 || sleep(rate_limit_duration_sec)
     end
@@ -41,37 +41,37 @@ function send_plotter_cmds(port, cmds; rate_limit_duration_sec=0.2, kwargs...)
 end
 
 """
-    send_plotter_cmd(port, cmd::String; safety_up=true, logfile)
+    run_command(plotter, cmd; safety_up)
 
 Send single `cmd` to plotter serial port `port`. If `safety_up` is true, any pen down/pen move
 instructions are followed by a "pen up command". `cmd` will additionally be appended
 to `logfile` path, unless `logfile` is `missing`.
 """
-function send_plotter_cmd(port, cmd::String; safety_up=true, logfile)
-    if !ismissing(logfile) && !isfile(logfile)
-        mkpath(dirname(logfile))
-        touch(logfile)
-        @info "Saving commands out to $logfile"
-    end
-
+function run_command(plotter, cmd; safety_up::Bool)
     endswith(cmd, ";") || (cmd *= ";")
     cmd *= "\n"
-
     @debug "Sending: " cmd
-    write(port, cmd)
-    append_to_file!(logfile, cmd)
+
+    handle_cmd(plotter, cmd)
 
     if safety_up && (startswith(cmd, "PA") || startswith(cmd, "PD"))
-        cmd_up = "PU;"
-        write(port, cmd_up)
-        append_to_file!(logfile, cmd_up * "\n")
+        handle_cmd(plotter, "PU;\n")
     end
     return nothing
 end
 
-append_to_file!(_, ::Missing) = nothing
-function append_to_file!(file, str)
-    return open(file, "a") do f
-        return write(f, str)
+handle_cmd(::Missing, cmd) = nothing
+
+handle_cmd(port::SerialPort, cmd::String) = write(port, cmd)
+
+function handle_cmd(filepath::String, cmd::String)
+    if !isfile(filepath)
+        mkpath(dirname(filepath))
+        touch(filepath)
     end
+    return open(filepath, "a") do file
+        return write(file, cmd)
+    end
+    return nothing
 end
+

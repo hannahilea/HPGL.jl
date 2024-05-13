@@ -2,10 +2,10 @@ using HPGL
 using Dates
 
 # Set up plotter
-plotter_port = set_up_plotter()
+plotter_port = set_up_serial_port_plotter()
 logfile = "polar_audio_plotter_repl_debug_$(now()).hpgl"
 
-# Not strictly necessary BUT will reset any settings you previously had going, 
+# Not strictly necessary BUT will reset any settings you previously had going,
 # which is probably what you want unless you KNOW you don't want it
 send_plotter_cmds(plotter_port, ["IN", "SP1", "PA0,0"]; logfile)
 
