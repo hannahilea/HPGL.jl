@@ -1,7 +1,7 @@
 name = "HPGL"
 uuid = "8a0a8c33-e66a-4f96-b221-102a3c913d75"
 authors = ["hannahilea <hannahilea@users.noreply.github.com>"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
