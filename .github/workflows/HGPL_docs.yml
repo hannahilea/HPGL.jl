@@ -25,9 +25,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install ubuntu dependencies
-          run: |
-            sudo apt-get install libasound-dev portaudio19-dev libportaudio2 libportaudiocpp0
-            sudo apt-get install ffmpeg libav-tools
+        run: |
+          sudo apt-get install libasound-dev portaudio19-dev libportaudio2 libportaudiocpp0
+          sudo apt-get install ffmpeg libav-tools
       - uses: julia-actions/setup-julia@latest
         with:
           version: 1.7
