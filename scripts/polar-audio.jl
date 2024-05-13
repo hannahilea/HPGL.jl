@@ -18,4 +18,3 @@ send_plotter_cmds(plotter_port, ["PU", "PA 0,0", "SP0"]; logfile)
 outfile = "polar.html"
 run(pipeline(`../plotter-tools/viz/target/debug/viz $logfile`; stdout=outfile))
 run(`open $outfile`)
-
