@@ -24,11 +24,14 @@ jobs:
     runs-on:
       - macos-latest
       # - unbuntu-latest Fails w/ same issue as https://github.com/JuliaAudio/PortAudio.jl/issues/126
+    arch:
+      - aarch64
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@latest
         with:
           version: 1.7
+          arch: ${{ matrix.arch }}
       - name: Install Julia dependencies
         run: |
           julia --project=docs/ -e 'using Pkg;
