@@ -6,8 +6,8 @@ using PortAudio
 
 export validate_file
 export micmeter, polar_micmeter # From audio
-export set_up_plotter, run_plotter_repl, send_plotter_cmd, send_plotter_cmds # From serialport
-export plot_file, plot_command!, plot_commands!, PlotterConfig, PlotState # From PlotHPGL
+export set_up_plotter, run_plotter_repl, send_plotter_cmd, send_plotter_cmds # From pen-plot.jl
+export plot_file, plot_command!, plot_commands!, PlotterConfig, PlotState # From visualize.jl
 
 function read_commands(filename)
     if !isfile(filename)
@@ -63,9 +63,9 @@ function validate_commands(commands)
         if startswith(cmd, "SP")
             get_pen_index(cmd) ## Will print warning if unexpected pen is found
         elseif startswith(cmd, "PA") || startswith(cmd, "PD") || startswith(cmd, "PU")
-            get_coords_from_parameter_str(cmd[3:end]) ## Will print warning if formatting is unexpected 
+            get_coords_from_parameter_str(cmd[3:end]) ## Will print warning if formatting is unexpected
         elseif !in(cmd, ["IN"])
-            @warn "Unexpected command `$cmd` (could still be a valid command, and not yet handled by PlotHPGL.jl)"
+            @warn "Unexpected command `$cmd` (could still be a valid command, just not yet handled by visualize.jl)"
         end
     end
     #TODO-future: test that PU always happens before changing a pen
@@ -76,10 +76,10 @@ function validate_commands(commands)
     return nothing
 end
 
-include("./plotHPGL.jl")
-using .PlotHPGL
+include("./visualize.jl")
+using .Visualize
 
-include("./serialport.jl")
+include("./pen-plot.jl")
 include("./audio.jl")
 
 end # module HPGL

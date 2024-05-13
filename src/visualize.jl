@@ -1,5 +1,5 @@
 
-module PlotHPGL
+module Visualize
 
 using CairoMakie
 using HPGL: read_commands, get_coords_from_parameter_str, get_pen_index, validate_file,
@@ -148,7 +148,7 @@ function plot_command!(state::PlotState, cmd)
         state.pen_is_down = false
         state.i_pen = get_pen_index(cmd)
     elseif startswith(cmd, "PA")
-        # Assume that this is only one point....which is fair, because we've already 
+        # Assume that this is only one point....which is fair, because we've already
         # run through the validation that would catch this error
         coords = get_coords_from_parameter_str(cmd[3:end])
         for c in coords
@@ -161,4 +161,4 @@ function plot_command!(state::PlotState, cmd)
     return state
 end
 
-end # module PlotHPGL
+end # module Visualize

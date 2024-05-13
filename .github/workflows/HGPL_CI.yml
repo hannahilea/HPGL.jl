@@ -1,0 +1,52 @@
+name: HPGL.jl - CI
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags: ["*"]
+    paths: ["**", ".github/workflows/HPGL_CI.yml"]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths: ["**",".github/workflows/HPGL_CI.yml"]
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+jobs:
+  test:
+    # Run on push's or non-draft PRs
+    if: (github.event_name == 'push') || (github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch')
+    name: CI - Julia v${{ matrix.version }} - ${{ matrix.runs-on }} - ${{ github.event_name }}
+    runs-on: ${{ matrix.runs-on }}
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - '1.7.2' # for whatever reason, 1.7.3 doesn't exist
+          - '1'
+        runs-on:
+          - macos-latest
+          # - unbuntu-latest Fails w/ same issue as https://github.com/JuliaAudio/PortAudio.jl/issues/126
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: julia-actions/setup-julia@latest
+        with:
+          version: ${{ matrix.version }}
+          cache-name: "${{ github.workflow }}-${{ github.job }}-${{ matrix.runs-on }}"
+      - uses: julia-actions/cache@v1
+        with:
+          cache-name: "${{ github.workflow }}-${{ github.job }}-${{ matrix.runs-on }}"
+          cache-compiled: true
+      - uses: julia-actions/julia-runtest@v1
+      - uses: julia-actions/julia-processcoverage@v1
+      - uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: lcov.info
