@@ -4,7 +4,7 @@
 [![CI](https://github.com/hannahilea/HPGL.jl/actions/workflows/HPGL_CI.yml/badge.svg)](https://github.com/hannahilea/HPGL.jl/actions/workflows/HPGL_CI.yml)
 [![codecov](https://codecov.io/gh/hannahilea/HPGL.jl/branch/main/graph/badge.svg?token=7pWFU40sqY)](https://app.codecov.io/gh/hannahilea/HPGL.jl)
 
-Interface for generating and handling both realtime and offline [Hewlett-Packard Graphics Language (HPGL)](https://en.wikipedia.org/wiki/HP-GL) commands, which can sent directly to a pen plotter or previewed as an image via the included visualizer.
+Interface for generating and handling both realtime and offline [Hewlett-Packard Graphics Language (HP-GL)](https://en.wikipedia.org/wiki/HP-GL) commands, which can sent directly to a pen plotter or previewed as an image via the included visualizer.
 
 The [scripts/](./scripts/) directory contains some common entrypoints for generating/working with generating HPGL and a pen plotter.
 
