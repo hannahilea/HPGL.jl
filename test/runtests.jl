@@ -8,7 +8,7 @@ using HPGL
     end
 
     @testset "pen-plot.jl basics" begin
-        @test ismissing(set_up_plotter())
+        @test ismissing(set_up_serial_port_plotter())
 
         # Writing commands logs to file also
         logfile = joinpath(mktempdir(), "log1.hpgl")

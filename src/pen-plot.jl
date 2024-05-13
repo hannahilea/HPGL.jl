@@ -1,5 +1,5 @@
 function set_up_serial_port_plotter(; portname="/dev/tty.usbserial-10",
-                        baudrate=9600)
+                                    baudrate=9600)
     if !((portname in get_port_list()) ||
          (replace(portname, "tty" => "cu") in get_port_list()))
         @warn "Port `$(portname) not found; ensure plotter is connected!" found = list_ports()
@@ -31,9 +31,12 @@ end
 Send a series of commands via [`run_command`](@ref), with a `rate_limit_duration_sec`
 pause between each function.
 """
-function send_plotter_cmds(port, cmds; rate_limit_duration_sec=0.2, safety_up=true)
+function send_plotter_cmds(port, cmds; rate_limit_duration_sec=0.2, safety_up=true,
+                           logfile=missing)
     for cmd in cmds
         run_command(port, cmd; safety_up)
+        run_command(port, cmd; safety_up)
+        run_command(logfile, cmd; safety_up)
         @debug "Sent cmd" cmd
         rate_limit_duration_sec == 0 || sleep(rate_limit_duration_sec)
     end
@@ -74,4 +77,3 @@ function handle_cmd(filepath::String, cmd::String)
     end
     return nothing
 end
-
