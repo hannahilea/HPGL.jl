@@ -1,10 +1,10 @@
 # HPGL.jl
 
-Interface for generating both realtime and offline [(HPGL)](https://en.wikipedia.org/wiki/HP-GL) code, which can sent directly to a pen plotter or previewed with the included visualizer. 
+Interface for generating both realtime and offline [(HPGL)](https://en.wikipedia.org/wiki/HP-GL) code, which can sent directly to a pen plotter or previewed with the included visualizer.
 
 To plot a full pre-generated HPGL file with an external pen plotter, use this [external `chunker` utility](https://github.com/WesleyAC/plotter-tools/tree/4a285e167421d2a917561413cda4e8724e860f5c/chunker).
 
-## Installation 
+## Installation
 With [Julia installed](https://julialang.org/downloads/), start the Julia REPL and add this package to your environment:
 ```
 using Pkg
@@ -15,7 +15,7 @@ using HPGL
 ## Pen plotter usage: realtime audio plotting!
 The [scripts/](./scripts/) directory contains some common entrypoints for generating/working with generating HPGL and a pen plotter.
 
-- [`validate-serialport.jl`](./scripts/validate-serialport.jl): Test script to ensure plotter serialport connection is valid. Run each command sequentially in the Julia REPL.
+- [`validate-pen-plotter.jl`](./scripts/validate-pen-plotter.jl): Test script to ensure plotter serial port connection is valid. Run each command sequentially in the Julia REPL.
 - [`explore-hpgl-commands.jl`](./scripts/explore-hpgl-commands.jl): Test script to explore additional pen plotter commands. Run each command sequentially in the REPL.
 - [`audio-meter-plot.jl`](./scripts/audio-meter-plot.jl): Demonstrates entrypoint to plotting realtime audio, as plotted horizontally across the page. Run each command sequentially in the REPL.
 - [`polar-audio.jl`](./scripts/polar-audio.jl): Demonstrates entrypoint to plotting realtime audio, as plotted spiraling out from the center of the page. Run each command sequentially in the REPL.
@@ -41,7 +41,7 @@ p = plot_file("examples/demo.hpgl"; outfile="myfile.png")
 display(p) # to view
 ```
 
-Use debug mode to additionally draw the borders of the plottable area as well as draw the paths of all pen-up movements: 
+Use debug mode to additionally draw the borders of the plottable area as well as draw the paths of all pen-up movements:
 ```
 using HPGL
 p = plot_file("examples/demo.hpgl"; config=PlotterConfig(; debug=true), outfile="myfile.png")
@@ -61,7 +61,7 @@ ps = PlotState(PlotterConfig())
 # plot initial input commands
 plot_commands!(ps, ["IN", "SP1", "PA 300,300", "PD"])
 
-# plot commands one at a time 
+# plot commands one at a time
 plot_command!(ps, "PA 3000,3000")
 
 # plot commands in bulk
