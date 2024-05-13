@@ -21,12 +21,11 @@ jobs:
   Documentation:
     # Run on push's or non-draft PRs
     if: (github.event_name == 'push') || (github.event.pull_request.draft == false)
-    runs-on: ubuntu-latest
+    runs-on:
+      - macos-latest
+      # - unbuntu-latest Fails w/ same issue as https://github.com/JuliaAudio/PortAudio.jl/issues/126
     steps:
       - uses: actions/checkout@v4
-      - name: Install ubuntu dependencies
-        run: |
-          sudo apt-get install libasound-dev portaudio19-dev libportaudio2 libportaudiocpp0
       - uses: julia-actions/setup-julia@latest
         with:
           version: 1.7
