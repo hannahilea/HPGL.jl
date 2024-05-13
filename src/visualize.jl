@@ -1,27 +1,13 @@
-
-module Visualize
-
-using CairoMakie
-using HPGL: read_commands, get_coords_from_parameter_str, get_pen_index, validate_file,
-            validate_commands
-
-CairoMakie.activate!(; type="svg") #Can be svg
-
-export plot_file, plot!, plot_command!, plot_commands!, PlotterConfig, PlotState
-
-const DEFAULT_PLOT_SIZE = (10300, 7650)
-const DEBUG_PEN_UP_COLOR = :magenta
-const DEFAULT_PEN_COLORS = [:black, :red, :yellow, :blue]
-
-Base.@kwdef struct PlotterConfig
-    plot_dimensions = DEFAULT_PLOT_SIZE
-    pen_colors = DEFAULT_PEN_COLORS
+Base.@kwdef struct VisualizationConfig
+    plot_dimensions = (10300, 7650)
+    pen_colors = [:black, :red, :yellow, :blue]
     linewidth = 20 # pen thickness
     debug = false
+    debug_pen_up_color = :magenta
 end
 
-Base.@kwdef mutable struct PlotState
-    config::PlotterConfig
+Base.@kwdef mutable struct VisualizationState
+    config::VisualizationConfig
     i_pen::Int = 0
     pen_is_down::Bool = false
     pen_position = Point2{Int64}(0, 0)
@@ -29,17 +15,19 @@ Base.@kwdef mutable struct PlotState
     ax::Axis
 end
 
-function PlotState(config)
+function VisualizationState(config)
     f = Figure(; size=config.plot_dimensions)
     ax = Axis(f[1, 1];
               limits=(-10, first(config.plot_dimensions) + 10, -10,
                       last(config.plot_dimensions) + 10))
     hidedecorations!(ax)
     config.debug || hidespines!(ax)  # hide the frame
-    return PlotState(; config, f, ax)
+    return VisualizationState(; config, f, ax)
 end
 
-Base.display(s::PlotState) = Base.display(s.f)
+set_up_visualization_plotter(config=VisualizationConfig()) = VisualizationState(config)
+
+Base.display(s::VisualizationState) = Base.display(s.f)
 
 function validate_position(pos_string::AbstractString, args...)
     coords = get_coords_from_parameter_str(pos_string)
@@ -82,7 +70,7 @@ function splat_commands(raw_commands)
     return commands
 end
 
-function plot_file(filename; config=PlotterConfig(), outfile=missing,
+function plot_file(filename; config=VisualizationConfig(), outfile=missing,
                    pause_before_each_command=false)
     # Safety first (will warn, not error)
     validate_file(filename) ## Won't fail but will print warnings
@@ -93,7 +81,7 @@ function plot_file(filename; config=PlotterConfig(), outfile=missing,
         validate_position(pos[3:end], config.plot_dimensions) ## Will print warning if any positions are out of bounds
     end
 
-    ps = PlotState(config)
+    ps = VisualizationState(config)
     plot_commands!(ps, commands; pause_before_each_command)
     !ismissing(outfile) && save(outfile, ps.f)
     display(ps)
@@ -107,7 +95,7 @@ function _get_current_pen_color(state)
     return DEBUG_PEN_UP_COLOR
 end
 
-function _move_to_point!(state::PlotState, pos)
+function _move_to_point!(state::VisualizationState, pos)
     isnothing(validate_position(pos, state.config.plot_dimensions)) || return nothing
     if state.pen_is_down || state.config.debug
         points = [state.pen_position, pos]
@@ -119,22 +107,7 @@ function _move_to_point!(state::PlotState, pos)
     return state
 end
 
-# assumes validated commands
-# assumes fig's axis has already been constructed via set_up_figure
-function plot_commands!(state::PlotState, commands::AbstractVector;
-                        pause_before_each_command=false)
-    for cmd in commands
-        if pause_before_each_command
-            display(state)
-            print("Type any command to do next command `$cmd`")
-            readline()
-        end
-        plot_command!(state, cmd)
-    end
-    return state
-end
-
-function plot_command!(state::PlotState, cmd)
+function handle_command!(state::VisualizationState, cmd)
     if cmd == "PD"
         state.pen_is_down = true
     elseif cmd == "PU"
@@ -158,7 +131,5 @@ function plot_command!(state::PlotState, cmd)
     else
         @warn "Command `$cmd` is currently unsupported by this visualizer"
     end
-    return state
+    return nothing
 end
-
-end # module Visualize

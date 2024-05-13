@@ -3,7 +3,7 @@ Pkg.activate(".") # Should be path to HPGL/audio directory
 using HPGL
 
 plotter_port = set_up_serial_port_plotter()
-run_plotter_repl(plotter_port; safety_up=true)
+start_plot_repl(plotter_port; safety_up=true)
 
 #= At the prompt, try
 IN

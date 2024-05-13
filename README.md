@@ -46,7 +46,7 @@ display(p) # to view
 Use debug mode to additionally draw the borders of the plottable area as well as draw the paths of all pen-up movements:
 ```
 using HPGL
-p = plot_file("examples/demo.hpgl"; config=PlotterConfig(; debug=true), outfile="myfile.png")
+p = plot_file("examples/demo.hpgl"; config=VisualizationConfig(; debug=true), outfile="myfile.png")
 display(p) # to view
 ```
 For additional configuration, see help docs by doing `?plot_file` in the REPL.
@@ -58,7 +58,7 @@ To preview HPGL commands one at a time, do
 using HPGL
 
 # set up basic plotter output figure
-ps = PlotState(PlotterConfig())
+ps = set_up_visualization_plotter()
 
 # plot initial input commands
 plot_commands!(ps, ["IN", "SP1", "PA 300,300", "PD"])
@@ -68,7 +68,7 @@ plot_command!(ps, "PA 3000,3000")
 
 # plot commands in bulk
 cmds = map(x -> "PA $x,$(x^1.2)", 1:10:10_000)
-plot_commands!(ps, cmds)
+plot_commands!!(ps, cmds)
 ```
 
 ## External resources
