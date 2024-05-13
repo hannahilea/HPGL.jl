@@ -39,7 +39,6 @@ jobs:
       - uses: julia-actions/setup-julia@latest
         with:
           version: ${{ matrix.version }}
-          cache-name: "${{ github.workflow }}-${{ github.job }}-${{ matrix.runs-on }}"
       - uses: julia-actions/cache@v1
         with:
           cache-name: "${{ github.workflow }}-${{ github.job }}-${{ matrix.runs-on }}"
