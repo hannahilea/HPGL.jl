@@ -1,5 +1,5 @@
 using Pkg
-Pkg.activate(".") # Should be path to HPGL/audio directory
+Pkg.activate(".") # Should be path to HPGL directory
 using HPGL
 using Dates
 
@@ -9,8 +9,6 @@ safety_up = false
 logfile = "explore_plotter_repl_debug.hpgl"
 send_plotter_cmds(plotter_port, ["IN", "SP2", "PA0,0"]; safety_up, logfile)
 
-# send_plotter_cmds(plotter_port, ["LBis this a label?;"]; safety_up, logfile)
-
 y = 1000
 for speed in [2, 10, 40]
     cmds = ["VS $speed", "PA 8000,$y", "PD", "PA 9000,$y", "PU"]
@@ -19,5 +17,7 @@ for speed in [2, 10, 40]
     y += 500
     sleep(0.2)
 end
+
+# send_plotter_cmds(plotter_port, ["LBis this a label?;"]; safety_up, logfile)
 
 close(plotter_port)
