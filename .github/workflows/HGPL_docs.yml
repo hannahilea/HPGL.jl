@@ -1,0 +1,39 @@
+name: HPGL.jl - Docs
+on:
+  workflow_dispatch:
+  push:
+    tags: ['*']
+    branches:
+      - main
+    paths:
+      - '.github/workflows/HPGL_docs.yml'
+      - 'docs/**'
+      - 'src/**'
+      - 'Project.toml'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/HPGL_docs.yml'
+      - 'docs/**'
+      - 'src/**'
+      - 'Project.toml'
+jobs:
+  Documentation:
+    # Run on push's or non-draft PRs
+    if: (github.event_name == 'push') || (github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@latest
+        with:
+          version: 1.7
+      - name: Install dependencies
+        run: |
+          julia --project=docs/ -e 'using Pkg;
+              Pkg.instantiate()
+              Pkg.develop(PackageSpec(path=pwd()));
+              Pkg.instantiate()'
+      - run: julia --project=docs "docs/make.jl"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # For authentication with GitHub Actions token
+          PYTHON: ""
