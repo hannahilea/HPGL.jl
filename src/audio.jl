@@ -1,10 +1,10 @@
 
 """
-    micmeter(plotter_port; x_offset=0, y_offset=0, xtick=100, ytick=1000, xmax=10_000)
+    micmeter(plotter_port; x_offset=0, y_offset=0, xtick=100, ytick=1000, xmax=10_000,
+             logfile)
 
-Continuously read from the default audio input and send commands to plot the per-buffer level to
-`plotter_port` (via [`send_plotter_cmds`](@ref)).
-TODO-document kwargs, pull out more kwargs
+Continuously read from the default audio input and send commands to plot the per-buffer
+microphone level to `plotter_port` (via [`send_plotter_cmds`](@ref)).
 """
 function micmeter(plotter_port; x_offset=0, y_offset=0, xtick=100, ytick=1000, xmax=10_000,
                   logfile)
