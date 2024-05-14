@@ -3,83 +3,161 @@ module HPGL
 using LibSerialPort
 using Dates
 using PortAudio
+using CairoMakie
 
-export validate_file
-export micmeter, polar_micmeter # From audio
-export set_up_plotter, run_plotter_repl, send_plotter_cmd, send_plotter_cmds # From pen-plot.jl
-export plot_file, plot_command!, plot_commands!, PlotterConfig, PlotState # From visualize.jl
+CairoMakie.activate!(; type="svg") #Can be svg
 
-function read_commands(filename)
-    if !isfile(filename)
-        throw(ArgumentError("File $filename not found!"))
+export plot_command!, plot_commands!, plot_hpgl_file!,
+       start_plot_repl, set_up_serial_port_plotter,
+       micmeter, polar_micmeter, # From audio.jl
+       VisualizationConfig, set_up_visualization_plotter, save_visualization, # From visualize.jl
+       validate_hpgl_file # From file-handling.jl
+
+"""
+    handle_command!(destination::T, command)
+
+Send `command` to `destination`, dispatching on the destination's type `T`. All
+destination types supported by this package must implement a `handle_command!` for
+that type.
+"""
+handle_command!(::Missing, command) = nothing
+
+function handle_command!(plotter, command)
+    throw(ErrorException("Unsupported plotter type `$(typeof(plotter))` for $plotter; if this is a new plotter type, ensure `handle_command!(::NewType,...)` is implemented "))
+end
+
+"""
+    plot_command!(dest, command; pen_up_immediately_after_command)
+
+Send single `command` to plot destination `dest`, where it will be handled by that destination
+type's [`handle_command!`](@ref).
+
+If `pen_up_immediately_after_command` is true, any "pen down" or "pen move while pen down" commands (PD, PA)
+will be followed by a "pen up command", to prevent pen bleed in situations where commands
+are sent infrequently to a physical pen plotter.
+"""
+function plot_command!(dest, command; pen_up_immediately_after_command::Bool)
+    endswith(command, ";") || (command *= ";")
+    command *= "\n"
+    @debug "Sending: " command
+    handle_command!(dest, command)
+
+    if pen_up_immediately_after_command &&
+       (startswith(command, "PA") || startswith(command, "PD"))
+        handle_command!(dest, "PU;\n")
     end
-    return get_commands(read(filename, String))
-end
-
-function get_commands(str::String)
-    raw_commands = split(replace(str, "\n" => ";"), ";")
-    cmds = map(raw_commands) do cmd
-        return rstrip(lstrip(cmd))
-    end
-    return filter(!isempty, cmds)
-end
-
-#TODO-future: nicely handle bad format, fail nicely or something
-function get_coords_from_parameter_str(str::AbstractString)
-    str = rstrip(lstrip(str))
-    isempty(str) && return []
-    return map(split(str, " ")) do param
-        coord_strs = split(rstrip(lstrip(param)), ",")
-        #TODO-future: handle float + 4 digits?
-        coords = let
-            fl = parse.(Float64, filter(!isempty, coord_strs))
-            Int.(round.(fl))
-        end
-        length(coords) == 2 ||
-            (@warn "Unexpected position command (`$param`); expected format `x,y`")
-        return coords
-    end
-end
-
-function get_pen_index(cmd)
-    startswith(cmd, "SP") || (@warn "Unexpected prefix for position ($cmd)")
-    i = parse(Int, lstrip(cmd[3:end]))
-    i > 8 && (@warn "Pen index `$i` may be out of bounds for supported number of pens")
-    return i
-end
-
-function validate_file(filename)
-    contents = read(filename, String)
-    commands = get_commands(contents)
-    return validate_commands(commands)
-end
-
-function validate_commands(commands)
-    first(commands) == "IN" || @warn "Expected first command to be `IN`"
-    startswith(commands[2], "SP") ||
-        @warn "Expected second command to select a pen (e.g. `SP1`)"
-
-    for cmd in commands
-        if startswith(cmd, "SP")
-            get_pen_index(cmd) ## Will print warning if unexpected pen is found
-        elseif startswith(cmd, "PA") || startswith(cmd, "PD") || startswith(cmd, "PU")
-            get_coords_from_parameter_str(cmd[3:end]) ## Will print warning if formatting is unexpected
-        elseif !in(cmd, ["IN"])
-            @warn "Unexpected command `$cmd` (could still be a valid command, just not yet handled by visualize.jl)"
-        end
-    end
-    #TODO-future: test that PU always happens before changing a pen
-    # TODO-future: ensure there's no more than one PA before PD; ensure PD/PU order is meaningful
-
-    commands[end - 1] == "PU" || @warn "Expected penultimate command to be `PU` (pen up)"
-    last(commands) == "SP0" || @warn "Expected final command to be `SP0` (deselect pen)"
     return nothing
 end
 
-include("./visualize.jl")
-using .Visualize
+"""
+    start_plot_repl(destination; pen_up_immediately_after_command=false,
+                    logfile="plotter_repl_debug_$(now()).hpgl")
 
-include("./pen-plot.jl")
+Start REPL-like environment that prompts for individual commands and then executes them
+for `destination` via [`plot_command!`](@ref). Additionally logs all commands entered
+at the REPL to `logfile`, unless `logfile=missing`.
+
+If `pen_up_immediately_after_command` is false, any "pen down" or "pen move while pen down" commands (PD, PA)
+will be followed by a "pen up command", to prevent pen bleed in situations where commands
+are sent infrequently to a physical pen plotter.
+"""
+function start_plot_repl(destination; pen_up_immediately_after_command=false,
+                         logfile="plotter_repl_debug_$(now()).hpgl")
+    if isdefined(Main, :VSCodeServer)
+        @warn "Likely cannot run `destination_repl` from an interactive VSCode session; user input broken"
+    end
+    while true
+        print("Enter next command: ")
+        command = readline()
+        command == "exit()" && break
+        plot_command!(destination, command; pen_up_immediately_after_command)
+        plot_command!(logfile, command; pen_up_immediately_after_command)
+    end
+    return logfile
+end
+
+"""
+    plot_commands!(destination, commands; rate_limit_duration_sec=0.2,
+                   pen_up_immediately_after_command=false, logfile=missing)
+
+Send a series of `commands`` to `destination` via [`plot_command!`](@ref), with a
+pause of `rate_limit_duration_sec` between each command. If `logfile` is not missing,
+will additionally append `commands` to `logfile`.
+"""
+function plot_commands!(destination, commands; rate_limit_duration_sec=0.2,
+                        pen_up_immediately_after_command=false, logfile=missing)
+    for command in commands
+        plot_command!(destination, command; pen_up_immediately_after_command)
+        plot_command!(logfile, command; pen_up_immediately_after_command)
+        rate_limit_duration_sec == 0 || sleep(rate_limit_duration_sec)
+    end
+    return nothing
+end
+
+"""
+    plot_hpgl_file!(destination, commands; rate_limit_duration_sec=0.2,
+                   pen_up_immediately_after_command=false)
+
+Send a file of HPGL `commands`` to `destination` via [`plot_commands!`](@ref), with a
+pause of `rate_limit_duration_sec` between each command.
+"""
+function plot_hpgl_file!(destination, hpgl_file; rate_limit_duration_sec=0.2,
+                         pen_up_immediately_after_command=false)
+    commands = read_hpgl_commands(hpgl_file)
+    return plot_commands!(destination, commands; rate_limit_duration_sec,
+                          pen_up_immediately_after_command)
+end
+
+#####
+##### Validation
+#####
+
+function validate_hpgl_commands(destination, commands)
+    @warn "`validate_hpgl_commands` not implemented for destination of type $(typeof(destination))"
+    return nothing
+end
+
+function validate_hpgl_file(destination, hpgl_file)
+    commands = read_hpgl_commands(hpgl_file)
+    return validate_hpgl_commands(destination, commands)
+end
+
+#####
+##### Pen plotter (communication via serial port)
+#####
+
+handle_command!(port::SerialPort, command::String) = write(port, command)
+
+function set_up_serial_port_plotter(; portname="/dev/tty.usbserial-10", baudrate=9600)
+    if !((portname in get_port_list()) ||
+         (replace(portname, "tty" => "cu") in get_port_list()))
+        @warn "Port `$(portname) not found; ensure plotter is connected!" found = list_ports()
+        return missing
+    end
+    # TODO-future: make idempotent; check if port already open, return it if so; could maybe add a global var for it? would we
+    # ever have multiple open at once??
+    return LibSerialPort.open(portname, baudrate)
+end
+
+#####
+##### Log file (write each command to file)
+#####
+
+function handle_command!(filepath::String, command::String)
+    if !isfile(filepath)
+        mkpath(dirname(filepath))
+        touch(filepath)
+    end
+    open(f -> write(f, command), filepath, "a")
+    return nothing
+end
+
+#####
+##### Includes
+#####
+
+include("./file-handling.jl")
 include("./audio.jl")
+include("./visualize.jl")
 
 end # module HPGL

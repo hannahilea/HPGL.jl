@@ -1,27 +1,13 @@
-
-module Visualize
-
-using CairoMakie
-using HPGL: read_commands, get_coords_from_parameter_str, get_pen_index, validate_file,
-            validate_commands
-
-CairoMakie.activate!(; type="svg") #Can be svg
-
-export plot_file, plot!, plot_command!, plot_commands!, PlotterConfig, PlotState
-
-const DEFAULT_PLOT_SIZE = (10300, 7650)
-const DEBUG_PEN_UP_COLOR = :magenta
-const DEFAULT_PEN_COLORS = [:black, :red, :yellow, :blue]
-
-Base.@kwdef struct PlotterConfig
-    plot_dimensions = DEFAULT_PLOT_SIZE
-    pen_colors = DEFAULT_PEN_COLORS
+Base.@kwdef struct VisualizationConfig
+    plot_dimensions = (10300, 7650)
+    pen_colors = [:black, :red, :yellow, :blue]
     linewidth = 20 # pen thickness
     debug = false
+    debug_pen_up_color = :magenta
 end
 
-Base.@kwdef mutable struct PlotState
-    config::PlotterConfig
+Base.@kwdef mutable struct VisualizationState
+    config::VisualizationConfig
     i_pen::Int = 0
     pen_is_down::Bool = false
     pen_position = Point2{Int64}(0, 0)
@@ -29,17 +15,78 @@ Base.@kwdef mutable struct PlotState
     ax::Axis
 end
 
-function PlotState(config)
+function VisualizationState(config)
     f = Figure(; size=config.plot_dimensions)
     ax = Axis(f[1, 1];
               limits=(-10, first(config.plot_dimensions) + 10, -10,
                       last(config.plot_dimensions) + 10))
     hidedecorations!(ax)
     config.debug || hidespines!(ax)  # hide the frame
-    return PlotState(; config, f, ax)
+    return VisualizationState(; config, f, ax)
 end
 
-Base.display(s::PlotState) = Base.display(s.f)
+set_up_visualization_plotter(config=VisualizationConfig()) = VisualizationState(config)
+
+Base.display(s::VisualizationState) = Base.display(s.f)
+save_visualization(ps::VisualizationState, outfile) = save(outfile, ps.f)
+
+function handle_command!(state::VisualizationState, cmd)
+    cmd = rstrip(cmd, '\n')
+    cmd = rstrip(cmd, ';')
+    if startswith(cmd, "PD")
+        state.pen_is_down = true
+        coords = get_coords_from_parameter_str(cmd[3:end])
+        for c in coords
+            pos = Point2(c)
+            _move_to_point!(state, pos)
+        end
+    elseif cmd == "PU"
+        state.pen_is_down = false
+    elseif cmd == "IN"
+        _move_to_point!(state, Point2{Int64}(0, 0))
+        state.pen_is_down = false
+        state.i_pen = 0
+    elseif startswith(cmd, "SP")
+        _move_to_point!(state, Point2{Int64}(0, 0))
+        state.pen_is_down = false
+        state.i_pen = get_pen_index(cmd)
+    elseif startswith(cmd, "PA")
+        coords = get_coords_from_parameter_str(cmd[3:end])
+        for c in coords
+            pos = Point2(c)
+            _move_to_point!(state, pos)
+        end
+    else
+        @warn "`$cmd` is currently unsupported by visualizer; skipping"
+    end
+    return nothing
+end
+
+function validate_hpgl_commands(::VisualizationState, commands)
+    first(commands) == "IN" || @warn "Expected first command to be `IN`"
+    startswith(commands[2], "SP") ||
+        @warn "Expected second command to select a pen (e.g. `SP1`)"
+
+    for cmd in commands
+        if startswith(cmd, "SP")
+            get_pen_index(cmd) ## Will print warning if unexpected pen is found
+        elseif startswith(cmd, "PA") || startswith(cmd, "PD") || startswith(cmd, "PU")
+            get_coords_from_parameter_str(cmd[3:end]) ## Will print warning if formatting is unexpected
+        elseif !in(cmd, ["IN"])
+            @warn "Unexpected command `$cmd` (could still be a valid command, just not yet handled by visualize.jl)"
+        end
+    end
+    # TODO-future: test that PU always happens before changing a pen
+    # TODO-future: ensure there's no more than one PA before PD; ensure PD/PU order is meaningful
+
+    commands[end - 1] == "PU" || @warn "Expected penultimate command to be `PU` (pen up)"
+    last(commands) == "SP0" || @warn "Expected final command to be `SP0` (deselect pen)"
+    return nothing
+end
+
+#####
+##### Validation utils
+#####
 
 function validate_position(pos_string::AbstractString, args...)
     coords = get_coords_from_parameter_str(pos_string)
@@ -61,53 +108,14 @@ function validate_position(pos, plot_dimensions)
     return nothing
 end
 
-function splat_commands(raw_commands)
-    commands = []
-    for cmd in raw_commands
-        split_commands = split(cmd, " "; limit=2)
-        if length(split_commands) == 1
-            push!(commands, cmd)
-        else
-            # TODO-future: makes gross assumption that any params ARE coordinates! fix that.
-            # TODO-future: makes gross assumption that any params ARE coordinates! fix that.
-            mnemonic = first(split_commands)
-            if mnemonic != "PA"
-                push!(commands, mnemonic)
-            end
-            for coord in get_coords_from_parameter_str(last(split_commands))
-                push!(commands, string("PA", " ", first(coord), ",", last(coord)))
-            end
-        end
-    end
-    return commands
-end
-
-function plot_file(filename; config=PlotterConfig(), outfile=missing,
-                   pause_before_each_command=false)
-    # Safety first (will warn, not error)
-    validate_file(filename) ## Won't fail but will print warnings
-    raw_commands = read_commands(filename)
-    commands = splat_commands(raw_commands)
-    validate_commands(commands)
-    for pos in filter(startswith("PA"), commands)
-        validate_position(pos[3:end], config.plot_dimensions) ## Will print warning if any positions are out of bounds
-    end
-
-    ps = PlotState(config)
-    plot_commands!(ps, commands; pause_before_each_command)
-    !ismissing(outfile) && save(outfile, ps.f)
-    display(ps)
-    return ps
-end
-
 function _get_current_pen_color(state)
     if state.pen_is_down && state.i_pen != 0
         return state.config.pen_colors[state.i_pen]
     end
-    return DEBUG_PEN_UP_COLOR
+    return state.config.debug_pen_up_color
 end
 
-function _move_to_point!(state::PlotState, pos)
+function _move_to_point!(state::VisualizationState, pos)
     isnothing(validate_position(pos, state.config.plot_dimensions)) || return nothing
     if state.pen_is_down || state.config.debug
         points = [state.pen_position, pos]
@@ -119,46 +127,26 @@ function _move_to_point!(state::PlotState, pos)
     return state
 end
 
-# assumes validated commands
-# assumes fig's axis has already been constructed via set_up_figure
-function plot_commands!(state::PlotState, commands::AbstractVector;
-                        pause_before_each_command=false)
-    for cmd in commands
-        if pause_before_each_command
-            display(state)
-            print("Type any command to do next command `$cmd`")
-            readline()
+#TODO-future: nicely handle bad format, fail nicely or something
+function get_coords_from_parameter_str(str::AbstractString)
+    str = rstrip(lstrip(str))
+    isempty(str) && return []
+    return map(split(str, " ")) do param
+        coord_strs = split(rstrip(lstrip(param)), ",")
+        #TODO-future: handle float + 4 digits?
+        coords = let
+            fl = parse.(Float64, filter(!isempty, coord_strs))
+            Int.(round.(fl))
         end
-        plot_command!(state, cmd)
+        length(coords) == 2 ||
+            (@warn "Unexpected position command (`$param`); expected format `x,y`")
+        return coords
     end
-    return state
 end
 
-function plot_command!(state::PlotState, cmd)
-    if cmd == "PD"
-        state.pen_is_down = true
-    elseif cmd == "PU"
-        state.pen_is_down = false
-    elseif cmd == "IN"
-        _move_to_point!(state, Point2{Int64}(0, 0))
-        state.pen_is_down = false
-        state.i_pen = 0
-    elseif startswith(cmd, "SP")
-        _move_to_point!(state, Point2{Int64}(0, 0))
-        state.pen_is_down = false
-        state.i_pen = get_pen_index(cmd)
-    elseif startswith(cmd, "PA")
-        # Assume that this is only one point....which is fair, because we've already
-        # run through the validation that would catch this error
-        coords = get_coords_from_parameter_str(cmd[3:end])
-        for c in coords
-            pos = Point2(c)
-            _move_to_point!(state, pos)
-        end
-    else
-        @warn "Command `$cmd` is currently unsupported by this visualizer"
-    end
-    return state
+function get_pen_index(cmd)
+    startswith(cmd, "SP") || (@warn "Unexpected prefix for position ($cmd)")
+    i = parse(Int, lstrip(cmd[3:end]))
+    i > 8 && (@warn "Pen index `$i` may be out of bounds for supported number of pens")
+    return i
 end
-
-end # module Visualize

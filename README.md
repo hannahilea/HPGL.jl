@@ -23,33 +23,30 @@ Pkg.add("url="https://github.com/hannahilea/HPGL.jl")
 using HPGL
 ```
 
-## Non-pen plotter utilities
+## Functionality
 
-### File validation
+The following examples are all demonstrated with the backend destination set to the visualizer, so that it can be demoed by all users. If you have access to a pen plotter or other backend, it can be swapped for all uses of `viz` below.
 
-To validate a file, do
+### Full file rendering
+
+To preview an HPGL file with the visualizer, do
 ```
 using HPGL
-validate_file(joinpath(pkgdir(HPGL), "examples/demo.hpgl")) # No output if file is valid
-validate_file(joinpath(pkgdir(HPGL), "examples/invalid_file.hpgl")) # Shows warnings for unexpected/invalid file contents
-```
-
-### File preview/visualization
-
-To preview an HPGL file, and save it's resultant output to `outfile`, do
-```
-using HPGL
-p = plot_file("examples/demo.hpgl"; outfile="myfile.png")
-display(p) # to view
+viz=set_up_visualization_plotter()
+plot_hpgl_file!(viz, "examples/demo.hpgl")
+display(viz) # to view
 ```
 
 Use debug mode to additionally draw the borders of the plottable area as well as draw the paths of all pen-up movements:
 ```
 using HPGL
-p = plot_file("examples/demo.hpgl"; config=PlotterConfig(; debug=true), outfile="myfile.png")
-display(p) # to view
+viz = set_up_visualization_plotter(VisualizationConfig(; debug=true))
+plot_hpgl_file!(viz, "examples/demo.hpgl")
+display(viz) # to view
+save_visualization(viz, "demo.png") # save image
+save_visualization(viz, "demo.svg") #...or as svg
 ```
-For additional configuration, see help docs by doing `?plot_file` in the REPL.
+For additional configuration, see help docs by doing `?plot_hpgl_file!` in the REPL.
 
 ### Realtime (cumulative) preview/visualization
 
@@ -58,19 +55,29 @@ To preview HPGL commands one at a time, do
 using HPGL
 
 # set up basic plotter output figure
-ps = PlotState(PlotterConfig())
+viz = set_up_visualization_plotter()
 
 # plot initial input commands
-plot_commands!(ps, ["IN", "SP1", "PA 300,300", "PD"])
+plot_commands!(viz, ["IN", "SP1", "PA 300,300", "PD"])
 
 # plot commands one at a time
-plot_command!(ps, "PA 3000,3000")
+plot_command!(viz, "PA 3000,3000")
 
 # plot commands in bulk
-cmds = map(x -> "PA $x,$(x^1.2)", 1:10:10_000)
-plot_commands!(ps, cmds)
+cmds = map(x -> "PA $x,$(x^1.1)", 1:10:1_000)
+plot_commands!(viz, cmds)
 ```
+
+### File validation
+
+To validate a file, call `validate_hpgl_file` with the destination type:
+```
+using HPGL
+destination = set_up_visualization_plotter()
+validate_hpgl_file(destination, joinpath(pkgdir(HPGL), "examples/demo.hpgl")) # No output if file is valid
+validate_hpgl_file(destination, joinpath(pkgdir(HPGL), "examples/invalid_file.hpgl")) # Shows warnings for unexpected/invalid file contents
+```
+Validation not yet set implemented for all destinations.
 
 ## External resources
 - https://github.com/WesleyAC/plotter-tools
-
