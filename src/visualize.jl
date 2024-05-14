@@ -62,7 +62,7 @@ function handle_command!(state::VisualizationState, cmd)
     return nothing
 end
 
-function validate_hpgl_commands(::VisualizationConfig, commands)
+function validate_hpgl_commands(::VisualizationState, commands)
     first(commands) == "IN" || @warn "Expected first command to be `IN`"
     startswith(commands[2], "SP") ||
         @warn "Expected second command to select a pen (e.g. `SP1`)"
@@ -76,7 +76,7 @@ function validate_hpgl_commands(::VisualizationConfig, commands)
             @warn "Unexpected command `$cmd` (could still be a valid command, just not yet handled by visualize.jl)"
         end
     end
-    #TODO-future: test that PU always happens before changing a pen
+    # TODO-future: test that PU always happens before changing a pen
     # TODO-future: ensure there's no more than one PA before PD; ensure PD/PU order is meaningful
 
     commands[end - 1] == "PU" || @warn "Expected penultimate command to be `PU` (pen up)"

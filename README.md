@@ -23,18 +23,11 @@ Pkg.add("url="https://github.com/hannahilea/HPGL.jl")
 using HPGL
 ```
 
-## Non-pen plotter utilities
+## Functionality
 
-### File validation
+The following examples are all demonstrated with the backend destination set to the visualizer, so that it can be demoed by all users. If you have access to a pen plotter or other backend, it can be swapped for all uses of `viz` below.
 
-To validate a file, do
-```
-using HPGL
-validate_hpgl_file(VisualizationConfig(), joinpath(pkgdir(HPGL), "examples/demo.hpgl")) # No output if file is valid
-validate_hpgl_file(VisualizationConfig(), joinpath(pkgdir(HPGL), "examples/invalid_file.hpgl")) # Shows warnings for unexpected/invalid file contents
-```
-
-### File preview/visualization
+### Full file rendering
 
 To preview an HPGL file with the visualizer, do
 ```
@@ -74,6 +67,17 @@ plot_command!(viz, "PA 3000,3000")
 cmds = map(x -> "PA $x,$(x^1.1)", 1:10:1_000)
 plot_commands!(viz, cmds)
 ```
+
+### File validation
+
+To validate a file, call `validate_hpgl_file` with the destination type:
+```
+using HPGL
+destination = set_up_visualization_plotter()
+validate_hpgl_file(destination, joinpath(pkgdir(HPGL), "examples/demo.hpgl")) # No output if file is valid
+validate_hpgl_file(destination, joinpath(pkgdir(HPGL), "examples/invalid_file.hpgl")) # Shows warnings for unexpected/invalid file contents
+```
+Validation not yet set implemented for all destinations.
 
 ## External resources
 - https://github.com/WesleyAC/plotter-tools
