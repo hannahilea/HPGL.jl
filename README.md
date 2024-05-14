@@ -30,8 +30,8 @@ using HPGL
 To validate a file, do
 ```
 using HPGL
-validate_file(joinpath(pkgdir(HPGL), "examples/demo.hpgl")) # No output if file is valid
-validate_file(joinpath(pkgdir(HPGL), "examples/invalid_file.hpgl")) # Shows warnings for unexpected/invalid file contents
+validate_hpgl_file(joinpath(pkgdir(HPGL), "examples/demo.hpgl")) # No output if file is valid
+validate_hpgl_file(joinpath(pkgdir(HPGL), "examples/invalid_file.hpgl")) # Shows warnings for unexpected/invalid file contents
 ```
 
 ### File preview/visualization
@@ -39,17 +39,19 @@ validate_file(joinpath(pkgdir(HPGL), "examples/invalid_file.hpgl")) # Shows warn
 To preview an HPGL file, and save it's resultant output to `outfile`, do
 ```
 using HPGL
-p = plot_file("examples/demo.hpgl"; outfile="myfile.png")
+config=VisualizationConfig()
+p = plot_hpgl_file!(config, "examples/demo.hpgl"; outfile="myfile.png")
 display(p) # to view
 ```
 
 Use debug mode to additionally draw the borders of the plottable area as well as draw the paths of all pen-up movements:
 ```
 using HPGL
-p = plot_file("examples/demo.hpgl"; config=VisualizationConfig(; debug=true), outfile="myfile.png")
+config=VisualizationConfig(; debug=true)
+p = plot_hpgl_file!(config, "examples/demo.hpgl"; outfile="myfile.png")
 display(p) # to view
 ```
-For additional configuration, see help docs by doing `?plot_file` in the REPL.
+For additional configuration, see help docs by doing `?plot_hpgl_file!` in the REPL.
 
 ### Realtime (cumulative) preview/visualization
 

@@ -10,8 +10,7 @@ CairoMakie.activate!(; type="svg") #Can be svg
 export plot_command!, plot_commands!, start_plot_repl, set_up_serial_port_plotter,
        micmeter, polar_micmeter,                          # From audio.jl
        VisualizationConfig, set_up_visualization_plotter, # From visualize.jl
-       validate_file                                      # From file-handling.jl
-
+       validate_hpgl_file                                      # From file-handling.jl
 
 """
     handle_command!(destination::T, command)
@@ -27,59 +26,100 @@ function handle_command!(::Any, command)
 end
 
 """
-    plot_command!(dest, command; safety_up)
+    plot_command!(dest, command; pen_up_immediately_after_command)
 
 Send single `command` to plot destination `dest`, where it will be handled by that destination
 type's [`handle_command!`](@ref).
 
-If `safety_up` is true, any "pen down" or "pen move while pen down" commands (PD, PA)
+If `pen_up_immediately_after_command` is true, any "pen down" or "pen move while pen down" commands (PD, PA)
 will be followed by a "pen up command", to prevent pen bleed in situations where commands
 are sent infrequently to a physical pen plotter.
 """
-function plot_command!(dest, command; safety_up::Bool)
+function plot_command!(dest, command; pen_up_immediately_after_command::Bool)
     endswith(command, ";") || (command *= ";")
     command *= "\n"
     @debug "Sending: " command
-
     handle_command!(dest, command)
 
-    if safety_up && (startswith(command, "PA") || startswith(command, "PD"))
+    if pen_up_immediately_after_command &&
+       (startswith(command, "PA") || startswith(command, "PD"))
         handle_command!(dest, "PU;\n")
     end
     return nothing
 end
 
-#TODO-future: actual julia repl mode for plotter
-function start_plot_repl(plotter; safety_up=true,
+"""
+    start_plot_repl(destination; pen_up_immediately_after_command=true,
+                    logfile="plotter_repl_debug_$(now()).hpgl")
+
+Start REPL-like environment that prompts for individual commands and then executes them
+for `destination` via [`plot_command!`](@ref). Additionally logs all commands entered
+at the REPL to `logfile`, unless `logfile=missing`.
+
+If `pen_up_immediately_after_command` is true, any "pen down" or "pen move while pen down" commands (PD, PA)
+will be followed by a "pen up command", to prevent pen bleed in situations where commands
+are sent infrequently to a physical pen plotter.
+"""
+function start_plot_repl(destination; pen_up_immediately_after_command=true,
                          logfile="plotter_repl_debug_$(now()).hpgl")
     if isdefined(Main, :VSCodeServer)
-        @warn "Likely cannot run `plotter_repl` from an interactive VSCode session; user input broken"
+        @warn "Likely cannot run `destination_repl` from an interactive VSCode session; user input broken"
     end
     while true
         print("Enter next command: ")
         command = readline()
         command == "exit()" && break
-        plot_command!(plotter, command; safety_up)
-        plot_command!(logfile, command; safety_up)
+        plot_command!(destination, command; pen_up_immediately_after_command)
+        plot_command!(logfile, command; pen_up_immediately_after_command)
     end
     return logfile
 end
 
 """
-    plot_commands!(port, commands; rate_limit_duration_sec=0.2, safety_up=true)
+    plot_commands!(destination, commands; rate_limit_duration_sec=0.2,
+                   pen_up_immediately_after_command=true, logfile=missing)
 
-Send a series of commands via [`plot_command!`](@ref), with a `rate_limit_duration_sec`
-pause between each function.
+Send a series of `commands`` to `destination` via [`plot_command!`](@ref), with a
+pause of `rate_limit_duration_sec` between each command. If `logfile` is not missing,
+will additionally append `commands` to `logfile`.
 """
-function plot_commands!(port, commands; rate_limit_duration_sec=0.2, safety_up=true,
+function plot_commands!(destination, commands; rate_limit_duration_sec=0.2,
+                        pen_up_immediately_after_command=true,
                         logfile=missing)
     for command in commands
-        plot_command!(port, command; safety_up)
-        plot_command!(logfile, command; safety_up)
-        @debug "Sent command" command
+        plot_command!(destination, command; pen_up_immediately_after_command)
+        plot_command!(logfile, command; pen_up_immediately_after_command)
         rate_limit_duration_sec == 0 || sleep(rate_limit_duration_sec)
     end
     return nothing
+end
+
+"""
+    plot_hpgl_file!(destination, commands; rate_limit_duration_sec=0.2,
+                   pen_up_immediately_after_command=false)
+
+Send a file of HPGL `commands`` to `destination` via [`plot_commands!`](@ref), with a
+pause of `rate_limit_duration_sec` between each command.
+"""
+function plot_hpgl_file!(destination, hpgl_file; rate_limit_duration_sec=0.2,
+                         pen_up_immediately_after_command=false)
+    commands = read_hpgl_commands(hpgl_file)
+    return plot_commands!(destination, commands; rate_limit_duration_sec,
+                          pen_up_immediately_after_command)
+end
+
+#####
+##### Validation
+#####
+
+function validate_hpgl_commands(destination, commands)
+    @warn "`validate_hpgl_commands` not implemented for destination of type $(typeof(destination))"
+    return nothing
+end
+
+function validate_hpgl_file(destination, hpgl_file)
+    commands = read_hpgl_commands(hpgl_file)
+    return validate_hpgl_commands(destination, commands)
 end
 
 #####
@@ -88,8 +128,7 @@ end
 
 handle_command!(port::SerialPort, command::String) = write(port, command)
 
-function set_up_serial_port_plotter(; portname="/dev/tty.usbserial-10",
-                                    baudrate=9600)
+function set_up_serial_port_plotter(; portname="/dev/tty.usbserial-10", baudrate=9600)
     if !((portname in get_port_list()) ||
          (replace(portname, "tty" => "cu") in get_port_list()))
         @warn "Port `$(portname) not found; ensure plotter is connected!" found = list_ports()
@@ -101,7 +140,7 @@ function set_up_serial_port_plotter(; portname="/dev/tty.usbserial-10",
 end
 
 #####
-##### Log file (write commands to file)
+##### Log file (write each command to file)
 #####
 
 function handle_command!(filepath::String, command::String)

@@ -36,7 +36,7 @@ using HPGL
 
         # When not safety up, don't
         logfile2 = joinpath(mktempdir(), "log2.hpgl")
-        plot_commands!(missing, ["PA 30,20"]; safety_up=false, logfile=logfile2)
+        plot_commands!(missing, ["PA 30,20"]; pen_up_immediately_after_command=false, logfile=logfile2)
         @test readlines(logfile2) == ["PA 30,20;"]
     end
 end

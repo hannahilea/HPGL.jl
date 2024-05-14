@@ -29,84 +29,6 @@ set_up_visualization_plotter(config=VisualizationConfig()) = VisualizationState(
 
 Base.display(s::VisualizationState) = Base.display(s.f)
 
-function validate_position(pos_string::AbstractString, args...)
-    coords = get_coords_from_parameter_str(pos_string)
-    if length(coords) != 1
-        str = "Currently only one position per mnemonic is supported by this plotting visualization!"
-        @warn str
-        return str
-    end
-    return validate_position(only(coords), args...)
-end
-
-function validate_position(pos, plot_dimensions)
-    if !(0 <= first(pos) <= first(plot_dimensions) &&
-         0 <= last(pos) <= last(plot_dimensions))
-        str = "Requested position `$pos` outside of plottable area `$(plot_dimensions)! Will be ignored."
-        @warn str
-        return str
-    end
-    return nothing
-end
-
-function splat_commands(raw_commands)
-    commands = []
-    for cmd in raw_commands
-        split_commands = split(cmd, " "; limit=2)
-        if length(split_commands) == 1
-            push!(commands, cmd)
-        else
-            # TODO-future: makes gross assumption that any params ARE coordinates! fix that.
-            # TODO-future: makes gross assumption that any params ARE coordinates! fix that.
-            mnemonic = first(split_commands)
-            if mnemonic != "PA"
-                push!(commands, mnemonic)
-            end
-            for coord in get_coords_from_parameter_str(last(split_commands))
-                push!(commands, string("PA", " ", first(coord), ",", last(coord)))
-            end
-        end
-    end
-    return commands
-end
-
-function plot_file(filename; config=VisualizationConfig(), outfile=missing,
-                   pause_before_each_command=false)
-    # Safety first (will warn, not error)
-    validate_file(filename) ## Won't fail but will print warnings
-    raw_commands = read_commands(filename)
-    commands = splat_commands(raw_commands)
-    validate_commands(commands)
-    for pos in filter(startswith("PA"), commands)
-        validate_position(pos[3:end], config.plot_dimensions) ## Will print warning if any positions are out of bounds
-    end
-
-    ps = VisualizationState(config)
-    plot_commands!(ps, commands; pause_before_each_command)
-    !ismissing(outfile) && save(outfile, ps.f)
-    display(ps)
-    return ps
-end
-
-function _get_current_pen_color(state)
-    if state.pen_is_down && state.i_pen != 0
-        return state.config.pen_colors[state.i_pen]
-    end
-    return DEBUG_PEN_UP_COLOR
-end
-
-function _move_to_point!(state::VisualizationState, pos)
-    isnothing(validate_position(pos, state.config.plot_dimensions)) || return nothing
-    if state.pen_is_down || state.config.debug
-        points = [state.pen_position, pos]
-        color = _get_current_pen_color(state)
-        @debug points color
-        lines!(points; color, state.config.linewidth)
-    end
-    state.pen_position = pos
-    return state
-end
-
 function handle_command!(state::VisualizationState, cmd)
     if cmd == "PD"
         state.pen_is_down = true
@@ -132,4 +54,93 @@ function handle_command!(state::VisualizationState, cmd)
         @warn "Command `$cmd` is currently unsupported by this visualizer"
     end
     return nothing
+end
+
+function validate_hpgl_commands(destination::VisualizationConfig, commands)
+    first(commands) == "IN" || @warn "Expected first command to be `IN`"
+    startswith(commands[2], "SP") ||
+        @warn "Expected second command to select a pen (e.g. `SP1`)"
+
+    for cmd in commands
+        if startswith(cmd, "SP")
+            get_pen_index(cmd) ## Will print warning if unexpected pen is found
+        elseif startswith(cmd, "PA") || startswith(cmd, "PD") || startswith(cmd, "PU")
+            get_coords_from_parameter_str(cmd[3:end]) ## Will print warning if formatting is unexpected
+        elseif !in(cmd, ["IN"])
+            @warn "Unexpected command `$cmd` (could still be a valid command, just not yet handled by visualize.jl)"
+        end
+    end
+    #TODO-future: test that PU always happens before changing a pen
+    # TODO-future: ensure there's no more than one PA before PD; ensure PD/PU order is meaningful
+
+    commands[end - 1] == "PU" || @warn "Expected penultimate command to be `PU` (pen up)"
+    last(commands) == "SP0" || @warn "Expected final command to be `SP0` (deselect pen)"
+    return nothing
+end
+
+#####
+##### Validation utils
+#####
+
+function validate_position(pos_string::AbstractString, args...)
+    coords = get_coords_from_parameter_str(pos_string)
+    if length(coords) != 1
+        str = "Currently only one position per mnemonic is supported by this plotting visualization!"
+        @warn str
+        return str
+    end
+    return validate_position(only(coords), args...)
+end
+
+function validate_position(pos, plot_dimensions)
+    if !(0 <= first(pos) <= first(plot_dimensions) &&
+         0 <= last(pos) <= last(plot_dimensions))
+        str = "Requested position `$pos` outside of plottable area `$(plot_dimensions)! Will be ignored."
+        @warn str
+        return str
+    end
+    return nothing
+end
+
+function _get_current_pen_color(state)
+    if state.pen_is_down && state.i_pen != 0
+        return state.config.pen_colors[state.i_pen]
+    end
+    return DEBUG_PEN_UP_COLOR
+end
+
+function _move_to_point!(state::VisualizationState, pos)
+    isnothing(validate_position(pos, state.config.plot_dimensions)) || return nothing
+    if state.pen_is_down || state.config.debug
+        points = [state.pen_position, pos]
+        color = _get_current_pen_color(state)
+        @debug points color
+        lines!(points; color, state.config.linewidth)
+    end
+    state.pen_position = pos
+    return state
+end
+
+#TODO-future: nicely handle bad format, fail nicely or something
+function get_coords_from_parameter_str(str::AbstractString)
+    str = rstrip(lstrip(str))
+    isempty(str) && return []
+    return map(split(str, " ")) do param
+        coord_strs = split(rstrip(lstrip(param)), ",")
+        #TODO-future: handle float + 4 digits?
+        coords = let
+            fl = parse.(Float64, filter(!isempty, coord_strs))
+            Int.(round.(fl))
+        end
+        length(coords) == 2 ||
+            (@warn "Unexpected position command (`$param`); expected format `x,y`")
+        return coords
+    end
+end
+
+function get_pen_index(cmd)
+    startswith(cmd, "SP") || (@warn "Unexpected prefix for position ($cmd)")
+    i = parse(Int, lstrip(cmd[3:end]))
+    i > 8 && (@warn "Pen index `$i` may be out of bounds for supported number of pens")
+    return i
 end
