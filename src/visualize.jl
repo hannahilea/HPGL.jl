@@ -56,7 +56,7 @@ function handle_command!(state::VisualizationState, cmd)
     return nothing
 end
 
-function validate_hpgl_commands(destination::VisualizationConfig, commands)
+function validate_hpgl_commands(::VisualizationConfig, commands)
     first(commands) == "IN" || @warn "Expected first command to be `IN`"
     startswith(commands[2], "SP") ||
         @warn "Expected second command to select a pen (e.g. `SP1`)"

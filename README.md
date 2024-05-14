@@ -30,17 +30,17 @@ using HPGL
 To validate a file, do
 ```
 using HPGL
-validate_hpgl_file(joinpath(pkgdir(HPGL), "examples/demo.hpgl")) # No output if file is valid
-validate_hpgl_file(joinpath(pkgdir(HPGL), "examples/invalid_file.hpgl")) # Shows warnings for unexpected/invalid file contents
+validate_hpgl_file(VisualizationConfig(), joinpath(pkgdir(HPGL), "examples/demo.hpgl")) # No output if file is valid
+validate_hpgl_file(VisualizationConfig(), joinpath(pkgdir(HPGL), "examples/invalid_file.hpgl")) # Shows warnings for unexpected/invalid file contents
 ```
 
 ### File preview/visualization
 
-To preview an HPGL file, and save it's resultant output to `outfile`, do
+To preview an HPGL file with the visualizer, do
 ```
 using HPGL
-config=VisualizationConfig()
-p = plot_hpgl_file!(config, "examples/demo.hpgl"; outfile="myfile.png")
+viz=set_up_visualization_plotter()
+p = plot_hpgl_file!(viz, "examples/demo.hpgl")
 display(p) # to view
 ```
 

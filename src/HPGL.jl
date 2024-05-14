@@ -7,10 +7,11 @@ using CairoMakie
 
 CairoMakie.activate!(; type="svg") #Can be svg
 
-export plot_command!, plot_commands!, start_plot_repl, set_up_serial_port_plotter,
+export plot_command!, plot_commands!, plot_hpgl_file!,
+       start_plot_repl, set_up_serial_port_plotter,
        micmeter, polar_micmeter,                          # From audio.jl
        VisualizationConfig, set_up_visualization_plotter, # From visualize.jl
-       validate_hpgl_file                                      # From file-handling.jl
+       validate_hpgl_file                                 # From file-handling.jl
 
 """
     handle_command!(destination::T, command)
@@ -21,7 +22,7 @@ that type.
 """
 handle_command!(::Missing, command) = nothing
 
-function handle_command!(::Any, command)
+function handle_command!(plotter, command)
     throw(ErrorException("Unsupported plotter type `$(typeof(plotter))` for $plotter; if this is a new plotter type, ensure `handle_command!(::NewType,...)` is implemented "))
 end
 
