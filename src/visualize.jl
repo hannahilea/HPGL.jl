@@ -28,10 +28,18 @@ end
 set_up_visualization_plotter(config=VisualizationConfig()) = VisualizationState(config)
 
 Base.display(s::VisualizationState) = Base.display(s.f)
+save_visualization(ps::VisualizationState, outfile) = save(outfile, ps.f)
 
 function handle_command!(state::VisualizationState, cmd)
-    if cmd == "PD"
+    cmd = rstrip(cmd, '\n')
+    cmd = rstrip(cmd, ';')
+    if startswith(cmd, "PD")
         state.pen_is_down = true
+        coords = get_coords_from_parameter_str(cmd[3:end])
+        for c in coords
+            pos = Point2(c)
+            _move_to_point!(state, pos)
+        end
     elseif cmd == "PU"
         state.pen_is_down = false
     elseif cmd == "IN"
@@ -43,15 +51,13 @@ function handle_command!(state::VisualizationState, cmd)
         state.pen_is_down = false
         state.i_pen = get_pen_index(cmd)
     elseif startswith(cmd, "PA")
-        # Assume that this is only one point....which is fair, because we've already
-        # run through the validation that would catch this error
         coords = get_coords_from_parameter_str(cmd[3:end])
         for c in coords
             pos = Point2(c)
             _move_to_point!(state, pos)
         end
     else
-        @warn "Command `$cmd` is currently unsupported by this visualizer"
+        @warn "`$cmd` is currently unsupported by visualizer; skipping"
     end
     return nothing
 end
@@ -106,7 +112,7 @@ function _get_current_pen_color(state)
     if state.pen_is_down && state.i_pen != 0
         return state.config.pen_colors[state.i_pen]
     end
-    return DEBUG_PEN_UP_COLOR
+    return state.config.debug_pen_up_color
 end
 
 function _move_to_point!(state::VisualizationState, pos)

@@ -9,9 +9,9 @@ CairoMakie.activate!(; type="svg") #Can be svg
 
 export plot_command!, plot_commands!, plot_hpgl_file!,
        start_plot_repl, set_up_serial_port_plotter,
-       micmeter, polar_micmeter,                          # From audio.jl
-       VisualizationConfig, set_up_visualization_plotter, # From visualize.jl
-       validate_hpgl_file                                 # From file-handling.jl
+       micmeter, polar_micmeter, # From audio.jl
+       VisualizationConfig, set_up_visualization_plotter, save_visualization, # From visualize.jl
+       validate_hpgl_file # From file-handling.jl
 
 """
     handle_command!(destination::T, command)
@@ -50,18 +50,18 @@ function plot_command!(dest, command; pen_up_immediately_after_command::Bool)
 end
 
 """
-    start_plot_repl(destination; pen_up_immediately_after_command=true,
+    start_plot_repl(destination; pen_up_immediately_after_command=false,
                     logfile="plotter_repl_debug_$(now()).hpgl")
 
 Start REPL-like environment that prompts for individual commands and then executes them
 for `destination` via [`plot_command!`](@ref). Additionally logs all commands entered
 at the REPL to `logfile`, unless `logfile=missing`.
 
-If `pen_up_immediately_after_command` is true, any "pen down" or "pen move while pen down" commands (PD, PA)
+If `pen_up_immediately_after_command` is false, any "pen down" or "pen move while pen down" commands (PD, PA)
 will be followed by a "pen up command", to prevent pen bleed in situations where commands
 are sent infrequently to a physical pen plotter.
 """
-function start_plot_repl(destination; pen_up_immediately_after_command=true,
+function start_plot_repl(destination; pen_up_immediately_after_command=false,
                          logfile="plotter_repl_debug_$(now()).hpgl")
     if isdefined(Main, :VSCodeServer)
         @warn "Likely cannot run `destination_repl` from an interactive VSCode session; user input broken"
@@ -78,15 +78,14 @@ end
 
 """
     plot_commands!(destination, commands; rate_limit_duration_sec=0.2,
-                   pen_up_immediately_after_command=true, logfile=missing)
+                   pen_up_immediately_after_command=false, logfile=missing)
 
 Send a series of `commands`` to `destination` via [`plot_command!`](@ref), with a
 pause of `rate_limit_duration_sec` between each command. If `logfile` is not missing,
 will additionally append `commands` to `logfile`.
 """
 function plot_commands!(destination, commands; rate_limit_duration_sec=0.2,
-                        pen_up_immediately_after_command=true,
-                        logfile=missing)
+                        pen_up_immediately_after_command=false, logfile=missing)
     for command in commands
         plot_command!(destination, command; pen_up_immediately_after_command)
         plot_command!(logfile, command; pen_up_immediately_after_command)

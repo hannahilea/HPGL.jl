@@ -40,16 +40,18 @@ To preview an HPGL file with the visualizer, do
 ```
 using HPGL
 viz=set_up_visualization_plotter()
-p = plot_hpgl_file!(viz, "examples/demo.hpgl")
-display(p) # to view
+plot_hpgl_file!(viz, "examples/demo.hpgl")
+display(viz) # to view
 ```
 
 Use debug mode to additionally draw the borders of the plottable area as well as draw the paths of all pen-up movements:
 ```
 using HPGL
-config=VisualizationConfig(; debug=true)
-p = plot_hpgl_file!(config, "examples/demo.hpgl"; outfile="myfile.png")
-display(p) # to view
+viz = set_up_visualization_plotter(VisualizationConfig(; debug=true))
+plot_hpgl_file!(viz, "examples/demo.hpgl")
+display(viz) # to view
+save_visualization(viz, "demo.png") # save image
+save_visualization(viz, "demo.svg") #...or as svg
 ```
 For additional configuration, see help docs by doing `?plot_hpgl_file!` in the REPL.
 
@@ -60,19 +62,18 @@ To preview HPGL commands one at a time, do
 using HPGL
 
 # set up basic plotter output figure
-ps = set_up_visualization_plotter()
+viz = set_up_visualization_plotter()
 
 # plot initial input commands
-plot_commands!(ps, ["IN", "SP1", "PA 300,300", "PD"])
+plot_commands!(viz, ["IN", "SP1", "PA 300,300", "PD"])
 
 # plot commands one at a time
-plot_command!(ps, "PA 3000,3000")
+plot_command!(viz, "PA 3000,3000")
 
 # plot commands in bulk
-cmds = map(x -> "PA $x,$(x^1.2)", 1:10:10_000)
-plot_commands!!(ps, cmds)
+cmds = map(x -> "PA $x,$(x^1.1)", 1:10:1_000)
+plot_commands!(viz, cmds)
 ```
 
 ## External resources
 - https://github.com/WesleyAC/plotter-tools
-

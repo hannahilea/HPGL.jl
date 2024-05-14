@@ -13,7 +13,8 @@ function micmeter(plotter_port; x_offset=0, y_offset=0, xtick=100, ytick=1000, x
     println("Press Ctrl-C to quit")
     x = x_offset
     try
-        plot_commands!(plotter_port, ["PA$x,$(y_offset)", "PD"]; pen_up_immediately_after_command, logfile)
+        plot_commands!(plotter_port, ["PA$x,$(y_offset)", "PD"];
+                       pen_up_immediately_after_command, logfile)
         while true
             block = read(mic, 24000) #TODO-may need to adjust!
             blockmax_raw = maximum(abs.(block)) # find the maximum value in the block
@@ -22,20 +23,21 @@ function micmeter(plotter_port; x_offset=0, y_offset=0, xtick=100, ytick=1000, x
             y = y_offset + blockmax #TODO-maybe scale for niceness
             @debug x y
             plot_commands!(plotter_port, ["PA $x,$y"]; rate_limit_duration_sec=0,
-                              pen_up_immediately_after_command, logfile)
+                           pen_up_immediately_after_command, logfile)
 
             x += xtick
             if x >= xmax
                 x = x_offset
                 y_offset += ytick
                 plot_commands!(plotter_port, ["PU", "PA$x,$(y_offset)", "PD"];
-                                  rate_limit_duration_sec=0, pen_up_immediately_after_command,
-                                  logfile)
+                               rate_limit_duration_sec=0, pen_up_immediately_after_command,
+                               logfile)
             end
         end
     finally
-        plot_commands!(plotter_port, ["PU"]; rate_limit_duration_sec=0, pen_up_immediately_after_command,
-                          logfile)
+        plot_commands!(plotter_port, ["PU"]; rate_limit_duration_sec=0,
+                       pen_up_immediately_after_command,
+                       logfile)
     end
     return nothing
 end
@@ -69,11 +71,13 @@ function polar_micmeter(plotter_port; start_point=(5150, 3825), logfile, num_ste
 
         # y = y_offset + blockmax #TODO-maybe scale for niceness
         # @debug x y
-        plot_commands!(plotter_port, ["PA $x,$y"]; rate_limit_duration_sec=0, pen_up_immediately_after_command,
-                          logfile)
+        plot_commands!(plotter_port, ["PA $x,$y"]; rate_limit_duration_sec=0,
+                       pen_up_immediately_after_command,
+                       logfile)
         if i == 1
-            plot_commands!(plotter_port, ["PD"]; rate_limit_duration_sec=0, pen_up_immediately_after_command,
-                              logfile)
+            plot_commands!(plotter_port, ["PD"]; rate_limit_duration_sec=0,
+                           pen_up_immediately_after_command,
+                           logfile)
         end
 
         radius += r_step
@@ -83,7 +87,7 @@ function polar_micmeter(plotter_port; start_point=(5150, 3825), logfile, num_ste
         if radius > 3825
             @info "We're over the limit!"
             plot_commands!(plotter_port, ["PU", "SP0"]; rate_limit_duration_sec=0,
-                              pen_up_immediately_after_command, logfile)
+                           pen_up_immediately_after_command, logfile)
             break
         end
     end

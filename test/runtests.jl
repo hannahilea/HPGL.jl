@@ -29,14 +29,21 @@ using HPGL
     end
 
     @testset "`send_plotter_cmd`" begin
-        # When safety up, adds a pen up
+        # When `pen_up_immediately_after_command`, adds a pen up
         logfile = joinpath(mktempdir(), "log1.hpgl")
-        plot_commands!(missing, ["PA 30,20"]; logfile)
+        plot_commands!(missing, ["PA 30,20"]; logfile,
+                       pen_up_immediately_after_command=true)
         @test readlines(logfile) == ["PA 30,20;", "PU;"]
 
-        # When not safety up, don't
+        # When false, don't add a pen up
         logfile2 = joinpath(mktempdir(), "log2.hpgl")
-        plot_commands!(missing, ["PA 30,20"]; pen_up_immediately_after_command=false, logfile=logfile2)
+        plot_commands!(missing, ["PA 30,20"]; logfile=logfile2,
+                       pen_up_immediately_after_command=false)
         @test readlines(logfile2) == ["PA 30,20;"]
+
+        # ...default is false
+        logfile3 = joinpath(mktempdir(), "log3.hpgl")
+        plot_commands!(missing, ["PA 30,20"]; logfile=logfile3)
+        @test readlines(logfile3) == ["PA 30,20;"]
     end
 end
